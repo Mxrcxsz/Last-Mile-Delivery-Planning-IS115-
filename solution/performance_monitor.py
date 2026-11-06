@@ -24,12 +24,65 @@ def calculate_metrics(
     midnight: "17:00" is 17 * 60 = 1020.
     """
 
-    # Illustration only: replace or extend this with your chosen metric.
-    number_of_trips = 0
-    for event in events:
-        if event["event_type"] == "hub_departure":
-            number_of_trips += 1
-    return {"number_of_trips": number_of_trips}
+    # Headline metric: on-time delivery rate.
+    #   on_time_rate = parcels delivered inside [window_start, window_end]
+    #                  / ALL parcels that arrived that day.
+    # Undelivered parcels stay in the denominator, so doing nothing scores 0
+    # and the metric cannot be won by a trivial policy.
+    # Early delivery (before window start) is NOT counted as on time.
+    window = {}
+    for row in parcels:
+        window[row["parcel_id"]] = (
+            _to_minutes(row["delivery_window_start"]),
+            _to_minutes(row["delivery_window_end"]),
+            row["delivery_location_id"],
+        )
+    total = len(window)
+
+    deliveries = [e for e in events if e["event_type"] == "delivery"]
+    on_time = early = late = 0
+    for event in deliveries:
+        start, end, _ = window[event["parcel_id"]]
+        if event["time"] < start:
+            early += 1
+        elif event["time"] > end:
+            late += 1
+        else:
+            on_time += 1
+
+    # Supporting metric: km driven per delivered parcel.
+    # Rebuild each trip's route from its delivery order: HUB -> stops -> HUB.
+    dist = {}
+    for row in distances:
+        dist[(row["location_1"], row["location_2"])] = float(row["dist"])
+    trips: Dict[Any, List[Any]] = {}
+    for event in deliveries:
+        trips.setdefault((event["vehicle_id"], event["trip_id"]), []).append(event)
+    total_km = 0.0
+    for stops in trips.values():
+        stops.sort(key=lambda e: e["time"])
+        route = ["HUB"] + [window[e["parcel_id"]][2] for e in stops] + ["HUB"]
+        for a, b in zip(route, route[1:]):
+            total_km += 0.0 if a == b else dist[(a, b)]
+
+    delivered = len(deliveries)
+    return {
+        "on_time_rate": round(on_time / total, 4) if total else 0.0,
+        "parcels_total": total,
+        "parcels_delivered": delivered,
+        "parcels_on_time": on_time,
+        "parcels_late": late,
+        "parcels_early": early,
+        "delivery_rate": round(delivered / total, 4) if total else 0.0,
+        "km_per_delivered_parcel": round(total_km / delivered, 3) if delivered else 0.0,
+    }
+
+
+def _to_minutes(hhmm: str) -> float:
+    """Convert an "HH:MM" string to minutes after midnight."""
+
+    hours, minutes = hhmm.split(":")
+    return float(int(hours) * 60 + int(minutes))
 
 
 def main(argv: Optional[List[str]] = None) -> int:
