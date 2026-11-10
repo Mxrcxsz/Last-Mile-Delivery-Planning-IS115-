@@ -23,7 +23,8 @@ from typing import Dict, List
 
 from simulator.models import Parcel, SimulationContext
 from solution.policies.helpers import (
-    HUB, nearest_neighbor_order, route_distance, waiting_parcels, within_limits,
+    HUB, MINUTES_PER_KM, nearest_neighbor_order, route_distance, waiting_parcels,
+    within_limits,
 )
 
 
@@ -38,8 +39,9 @@ def dispatch(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]
     overdue = []
     for parcel_id in waiting_parcels(parcel):
         record = parcel[parcel_id]
-        # Earliest possible arrival: drive straight from the hub (km == minutes).
-        earliest_arrival = departure + distances[HUB][record["delivery_location_id"]]
+        # Earliest possible arrival: drive straight from the hub.
+        earliest_arrival = (departure
+                            + distances[HUB][record["delivery_location_id"]] * MINUTES_PER_KM)
         if earliest_arrival > record["delivery_window_end"]:
             overdue.append(parcel_id)
         else:

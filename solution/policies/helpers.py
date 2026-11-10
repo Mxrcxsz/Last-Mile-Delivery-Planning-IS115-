@@ -1,11 +1,10 @@
 """Shared helpers for the dispatch policies. Inputs are read-only and never modified."""
 
 import math
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from simulator.models import Parcel, SimulationContext
-
-HUB = "HUB"
+from simulator.simulator import HUB, MINUTES_PER_KM
 
 
 def waiting_parcels(parcel: Dict[str, Parcel]) -> List[str]:
@@ -37,10 +36,9 @@ def route_distance(
 def within_limits(distance: float, context: SimulationContext) -> bool:
     """Return True if a trip of this many km meets the range and return-cutoff rules. O(1)."""
 
-    # At 60 km/h, km also equals travel time in minutes.
     departure = context["current_time"] + context["departure_delay"]
     return (distance <= context["max_trip_distance_km"]
-            and departure + distance <= context["return_cutoff"])
+            and departure + distance * MINUTES_PER_KM <= context["return_cutoff"])
 
 
 def nearest_neighbor_order(
@@ -66,3 +64,55 @@ def nearest_neighbor_order(
         remaining.remove(best)
         location = parcel[best]["delivery_location_id"]
     return ordered
+
+
+def cheapest_insertion(
+    route: List[str], parcel_id: str, parcel: Dict[str, Parcel],
+    distances: Dict[str, Dict[str, float]],
+) -> Tuple[int, float]:
+    """Return (position, added km) for the cheapest place to insert parcel_id. O(k) time.
+
+    Position i means the parcel goes before route[i]; len(route) means last. Ties go to the
+    earliest position, so the result is deterministic.
+    """
+
+    target = parcel[parcel_id]["delivery_location_id"]
+    stops = [HUB] + [parcel[stop]["delivery_location_id"] for stop in route] + [HUB]
+    best_position = 0
+    best_added = math.inf
+    for position in range(len(stops) - 1):
+        before, after = stops[position], stops[position + 1]
+        # Directed legs: replace before -> after with before -> target -> after.
+        added = distances[before][target] + distances[target][after] - distances[before][after]
+        if added < best_added:
+            best_position = position
+            best_added = added
+    return best_position, best_added
+
+
+def two_opt(
+    route: List[str], parcel: Dict[str, Parcel], distances: Dict[str, Dict[str, float]]
+) -> List[str]:
+    """Shorten a route by reversing segments until no reversal helps. O(k^3) time per pass.
+
+    The distances are directed, so reversing a segment also reverses every leg inside it.
+    Each candidate is therefore scored by recomputing its whole distance in O(k), rather
+    than by the usual four-edge shortcut. Only strict improvements are kept, so the loop
+    ends and the result is never longer than the input.
+    """
+
+    best = list(route)
+    best_distance = route_distance(best, parcel, distances)
+    improved = True
+    while improved:
+        improved = False
+        for start in range(len(best) - 1):
+            for end in range(start + 1, len(best)):
+                trial = best[:start] + best[start:end + 1][::-1] + best[end + 1:]
+                trial_distance = route_distance(trial, parcel, distances)
+                # The tolerance stops float noise from counting as an improvement.
+                if trial_distance < best_distance - 1e-9:
+                    best = trial
+                    best_distance = trial_distance
+                    improved = True
+    return best

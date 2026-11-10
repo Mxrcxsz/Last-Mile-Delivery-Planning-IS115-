@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from simulator.loaders import day_input_paths
+from simulator.loaders import day_input_paths, parse_time
+from simulator.simulator import HUB
 
 
 def calculate_metrics(
@@ -33,8 +34,8 @@ def calculate_metrics(
     window = {}
     for row in parcels:
         window[row["parcel_id"]] = (
-            _to_minutes(row["delivery_window_start"]),
-            _to_minutes(row["delivery_window_end"]),
+            parse_time(row["delivery_window_start"]),
+            parse_time(row["delivery_window_end"]),
             row["delivery_location_id"],
         )
     total = len(window)
@@ -61,7 +62,7 @@ def calculate_metrics(
     total_km = 0.0
     for stops in trips.values():
         stops.sort(key=lambda e: e["time"])
-        route = ["HUB"] + [window[e["parcel_id"]][2] for e in stops] + ["HUB"]
+        route = [HUB] + [window[e["parcel_id"]][2] for e in stops] + [HUB]
         for a, b in zip(route, route[1:]):
             total_km += 0.0 if a == b else dist[(a, b)]
 
@@ -76,13 +77,6 @@ def calculate_metrics(
         "delivery_rate": round(delivered / total, 4) if total else 0.0,
         "km_per_delivered_parcel": round(total_km / delivered, 3) if delivered else 0.0,
     }
-
-
-def _to_minutes(hhmm: str) -> float:
-    """Convert an "HH:MM" string to minutes after midnight."""
-
-    hours, minutes = hhmm.split(":")
-    return float(int(hours) * 60 + int(minutes))
 
 
 def main(argv: Optional[List[str]] = None) -> int:
