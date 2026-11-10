@@ -36,6 +36,15 @@ from solution.policies.helpers import (
 def dispatch(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]:
     """Return one trip: an urgent seed plus the parcels that are cheapest to add, 2-opt ordered."""
 
+    return two_opt(grow_trip(parcel, context), parcel, context["travel_distance"])
+
+
+def grow_trip(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]:
+    """Return the seeded, grown trip in cheapest-insertion order, before any 2-opt.
+
+    Shared with the policies that build on B, which change only the routing or timing.
+    """
+
     distances = context["travel_distance"]
     departure = context["current_time"] + context["departure_delay"]
 
@@ -96,4 +105,4 @@ def dispatch(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]
                 distance = trial_distance
                 load += parcel[parcel_id]["size"]
 
-    return two_opt(route, parcel, distances)
+    return route

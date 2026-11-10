@@ -22,7 +22,8 @@ Deadline: Friday 13 Nov 2026, 23:59 (submit one ZIP to eLearn: `solution/`, `res
 | Policy A2: `edf_nn_skip_overdue.py` | Prototyped in a scratch run only, not committed | [name] | Average on-time rate 0.5587 in the prototype. Needs its own file and a full run. |
 | `run_experiments.py` (run one policy on all 20 days, print a comparison table) | To do | [name] | Saves everyone running 20 days by hand. |
 | Policy B: `grow_2opt.py` | Done, on branch `marcus`, not committed yet | Marcus | Average on-time rate 0.5912, delivery rate 0.9598, but about 196 early deliveries per day. |
-| Policy C: `grow_2opt_wait.py` | To do | [name] | Builds on B. |
+| Policy B2: `grow_2opt_on_time.py` | Done, on branch `marcus`, not committed yet | Marcus | B with a 2-opt that maximises on-time stops first. Average on-time rate 0.7331, best so far. |
+| Policy C: `grow_2opt_wait.py` | To do | [name] | Builds on B2 (B2 beats B on all 20 days). |
 | Policy D: `ucs_routing.py` (optional) | Idea | [name] | Only if A2, B and C are finished. |
 | Control: `random_feasible.py` (optional) | Idea | [name] | A "does our idea beat luck" comparison. |
 | Full 20-day runs for every policy, committed under `results/` | To do | Everyone | Required deliverable. |
@@ -38,7 +39,7 @@ These come from Marcus's runs. Regenerate all numbers with the commands in "Repr
 - Policy A still serves parcels that are already past their window before it serves others. Moving them to the back of the queue (the A2 prototype) lifted the on-time rate to 0.5587 and almost halved the late parcels per day.
 - Policy A delivers about 14.8 parcels per day before their window opens, and the A2 prototype about 33.1. These do not count as on time, which is the reason for the waiting rule in Policy C.
 
-#### Comparison of baseline, A, A2 and B (all 20 days, run 10 Nov 2026)
+#### Comparison of baseline, A, A2, B and B2 (all 20 days, run 10 Nov 2026)
 
 Means over day_001 to day_020. "Wins" counts the days on which the second policy has the higher on-time rate. The paired t-test uses the 20 daily differences (df 19; |t| > 2.093 means p < 0.05). The sign test is two-sided.
 
@@ -48,7 +49,9 @@ Means over day_001 to day_020. "Wins" counts the days on which the second policy
 | A `edf_nn` | 0.4141 (0.046) | 0.7885 | 329 / 282 / 15 / 168 | 22.9 | 27.4 | 4840 | 12.3 s |
 | A2 `edf_nn_skip_overdue` | 0.5587 (0.048) | 0.7835 | 443 / 145 / 33 / 172 | 23.3 | 26.8 | 4787 | 10.7 s |
 | B `grow_2opt` | 0.5912 (0.033) | 0.9598 | 469 / 96 / 196 / 32 | 34.0 | 22.4 | 4132 | 28.0 s |
+| B2 `grow_2opt_on_time` | Leave now | Same as B | Nearest insertion, then 2-opt that keeps a reversal only if it delivers more parcels on time, or the same number over fewer km | Optimise the route for on-time deliveries, not distance. |
 | B without 2-opt (ablation, not a submitted policy) | 0.6104 (0.047) | 0.9595 | 484 / 100 / 177 / 32 | 33.6 | 22.7 | 4173 | not timed |
+| B2 `grow_2opt_on_time` | 0.7331 | 0.9593 | 582 / 81 / 98 / 32 | 33.4 | 22.8 | 4198 | 22.8 s (B: 20.7 s in the same session) |
 
 | Comparison | Mean difference in on-time rate | Wins | Sign test p | Paired t |
 | --- | --- | --- | --- | --- |
@@ -58,6 +61,9 @@ Means over day_001 to day_020. "Wins" counts the days on which the second policy
 | B vs A2 | +0.0325 (range −0.055 to +0.171) | 13/20 | 0.26 | 2.31 |
 | B vs B without 2-opt | −0.0192 | 6/20 | 0.12 | −2.06 |
 | B without 2-opt vs A2 | +0.0517 | 18/20 | < 0.001 | 3.24 |
+| B2 vs B | +0.1419 (range +0.042 to +0.246) | 20/20 | < 0.001 | 11.93 |
+| B2 vs B without 2-opt | +0.1227 | 20/20 | < 0.001 | 10.32 |
+| B2 vs A2 | +0.1744 | 20/20 | < 0.001 | 10.99 |
 
 Notes for the report, by rubric section:
 
@@ -68,6 +74,8 @@ Notes for the report, by rubric section:
   - B is the most consistent policy (on-time sd 0.033).
 - Algorithmic approaches (ablation): 2-opt minimises distance only. Removing it raises the on-time rate from 0.5912 to 0.6104 and costs only 1% more km. 2-opt reorders stops without looking at time windows, so it can push urgent parcels later. Lesson for the report: a shorter route is not the same as more on-time deliveries. Options: keep 2-opt but accept a reversal only if it does not reduce the on-time count, or drop it from B.
 - Computational complexity: B takes about 2.6 times as long as A2 over 20 days (28.0 s against 10.7 s, including simulator overhead), which matches the extra O(n k²) insertion search and the O(k³)-per-pass 2-opt. Every policy still runs a full day in under 1.5 s.
+- B2 (algorithmic approaches and results): changing only the 2-opt acceptance rule, from "shorter" to "more on-time stops, then shorter", lifts the on-time rate from 0.5912 to 0.7331 and wins on all 20 days. Each dispatch call selects the same parcels as B would; only the stop order differs (over a day, trips drift apart because return times change; delivery rate is the same). Most of the gain comes from early deliveries, which fall from 196 to 98 per day, because 2-opt can now move an early stop later into its window. km per day rises by only 1.6% (4132 to 4198). Strongest single result so far, and the best illustration of objective choice: the same local-search move gives a 0.14 gain or a 0.02 loss depending on what it optimises.
+- B2 is still a local search: it only tries segment reversals, so it can end at a route that no single reversal improves but a different order would. B2 still has about 98 early deliveries a day, which a waiting rule (Policy C) could recover.
 - Late parcels: B's late parcels are on average 191 minutes past window_end, against 115 for A2. These are mostly parcels that were already overdue, added only after every parcel that could still be on time.
 
 ### Policy plan
@@ -80,7 +88,7 @@ Each policy is a standalone file. All of them are built from three choices: timi
 | A `edf_nn` | Leave now | Earliest window end first | Nearest-neighbor | Deadline order and a shorter tour. |
 | A2 `edf_nn_skip_overdue` | Leave now | Earliest window end first, parcels that can no longer be on time go last | Nearest-neighbor | Do not spend trips on lost causes. |
 | B `grow_2opt` | Leave now | Seed with the most urgent parcel that can still be on time, then add the feasible parcel that adds the least distance | Nearest insertion, then 2-opt on the distance table | Choose nearby parcels on purpose and improve the order. |
-| C `grow_2opt_wait` | Wait if the trip is nearly empty and the most urgent parcel still has slack, or if the parcels would arrive before their window opens | Same as B | Same as B | Do not send trips too early or too empty. |
+| C `grow_2opt_wait` | Wait if the trip is nearly empty and the most urgent parcel still has slack, or if the parcels would arrive before their window opens | Same as B | Same as B2 | Do not send trips too early or too empty. |
 | D `ucs_routing` (optional) | Leave now | Same as A2 | Exact search (uniform-cost search over location and visited set) for small trips, nearest-neighbor otherwise | How much does optimal routing buy over a heuristic? |
 
 Design points to remember:
@@ -155,6 +163,7 @@ Tested with Python 3.13.7 and Python 3.9.6 on macOS. The commands in section "Re
 │       ├── edf_nn.py             Policy A: earliest deadline first, nearest-neighbor (branch marcus)
 │       ├── edf_nn_skip_overdue.py Policy A2: as A, overdue parcels last
 │       ├── grow_2opt.py          Policy B: urgent seed, cheapest insertion, 2-opt
+│       ├── grow_2opt_on_time.py  Policy B2: as B, 2-opt maximises on-time stops
 │       └── ...                   Planned policies, see "Policy plan"
 └── results/                      Generated by the commands below
     └── <policy>/day_XXX/         log.txt and metrics.json for one policy and day
@@ -195,6 +204,7 @@ Both window boundaries count as on time. A delivery before `window_start` is ear
 | `solution/policies/edf_nn.py` (Policy A) | Try waiting parcels by earliest `delivery_window_end` (parcel ID breaks ties). Skip a parcel that breaks capacity, and keep a parcel only if the nearest-neighbor tour that includes it meets the range and return cutoff. Parcels already past their window are still tried first. | Nearest neighbor from the hub. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k²), for n waiting parcels and k parcels in the trip |
 | `solution/policies/edf_nn_skip_overdue.py` (Policy A2) | Same as Policy A, except for the order parcels are tried in. A parcel is overdue if departure time + distance from the hub to its location > `delivery_window_end`. Parcels that can still be on time are tried first by earliest `delivery_window_end` (parcel ID breaks ties), then overdue parcels in the same order. | Nearest neighbor from the hub. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k²), for n waiting parcels and k parcels in the trip |
 | `solution/policies/grow_2opt.py` (Policy B) | Overdue is defined as in Policy A2. Seed the trip with the most urgent parcel (earliest `delivery_window_end`, parcel ID breaks ties) that can still be on time, or the most urgent overdue parcel if none can. Then keep adding the parcel that adds the fewest km at its cheapest position and keeps the trip within capacity, range and the return cutoff: first from the parcels that can still be on time, then from the overdue ones. | Cheapest insertion as parcels are added, then 2-opt on the directed distances until no reversal shortens the route. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k² + p k³), for n waiting parcels, k parcels in the trip and p 2-opt passes |
+| `solution/policies/grow_2opt_on_time.py` (Policy B2) | Same as Policy B. | Cheapest insertion as parcels are added, then 2-opt that keeps a reversal only if it delivers more parcels inside their window, or the same number over fewer km, and still meets the range and return cutoff. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k² + p k³), for n waiting parcels, k parcels in the trip and p 2-opt passes |
 
 The docstring of each policy file states its rules and complexity. The routing rule, timing rule and complexity of `baseline.py` are read from its code.
 
@@ -247,7 +257,7 @@ The metrics are written to `results/edf_nn/day_001/metrics.json`.
 This loop needs bash or zsh (macOS or Linux). It runs the simulator and the performance monitor for each policy and day:
 
 ```sh
-for policy in baseline edf_nn edf_nn_skip_overdue grow_2opt; do
+for policy in baseline edf_nn edf_nn_skip_overdue grow_2opt grow_2opt_on_time; do
   for day in $(seq -f "day_%03g" 1 20); do
     python3 -m simulator --policy "solution.policies.$policy" \
         --data data --day "$day" \
@@ -259,7 +269,7 @@ for policy in baseline edf_nn edf_nn_skip_overdue grow_2opt; do
 done
 ```
 
-To include another policy, add its module name after `grow_2opt` in the first line.
+To include another policy, add its module name after `grow_2opt_on_time` in the first line.
 
 For each policy and day it prints 8 lines: parcels, vehicles, capacity, range, scheduled events, delivered, the log path and the metrics path. It writes the two files listed in part d, overwriting any earlier run in the same folder.
 
@@ -295,6 +305,7 @@ Unweighted mean of the daily `metrics.json` values over day_001 to day_020:
 | edf_nn (A) | 0.4141 | 0.7885 | 7.75 |
 | edf_nn_skip_overdue (A2) | 0.5587 | 0.7835 | 7.7313 |
 | grow_2opt (B) | 0.5912 | 0.9598 | 5.4270 |
+| grow_2opt_on_time (B2) | 0.7331 | 0.9593 | 5.5164 |
 | edf_nn_skip_overdue (A2) | 0.5587 | 0.7835 | 7.7313 |
 
 The `edf_nn` row comes from Marcus's run. Regenerate it with the commands in part c and replace it with the exact output. The `edf_nn_skip_overdue` row is the exact output of the averaging script in part c.

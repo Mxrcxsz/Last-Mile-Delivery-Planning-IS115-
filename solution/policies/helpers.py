@@ -116,3 +116,61 @@ def two_opt(
                     best_distance = trial_distance
                     improved = True
     return best
+
+
+def on_time_count(
+    route: List[str], parcel: Dict[str, Parcel], distances: Dict[str, Dict[str, float]],
+    departure: float,
+) -> int:
+    """Return how many parcels on the route arrive inside their window. O(k) time.
+
+    Arrival at a stop is departure + km driven so far, with no service time at stops.
+    """
+
+    count = 0
+    location = HUB
+    driven = 0.0
+    for parcel_id in route:
+        record = parcel[parcel_id]
+        driven += distances[location][record["delivery_location_id"]]
+        location = record["delivery_location_id"]
+        arrival = departure + driven * MINUTES_PER_KM
+        if record["delivery_window_start"] <= arrival <= record["delivery_window_end"]:
+            count += 1
+    return count
+
+
+def two_opt_on_time(
+    route: List[str], parcel: Dict[str, Parcel], context: SimulationContext
+) -> List[str]:
+    """2-opt that maximises on-time stops first and minimises km second. O(k^3) time per pass.
+
+    A reversal is kept if it delivers more parcels on time, or the same number over fewer km,
+    and the reversed route still meets the range and return cutoff. Every kept reversal
+    strictly improves (on-time count, -distance), so the loop ends.
+    """
+
+    distances = context["travel_distance"]
+    departure = context["current_time"] + context["departure_delay"]
+    best = list(route)
+    best_distance = route_distance(best, parcel, distances)
+    best_on_time = on_time_count(best, parcel, distances, departure)
+    improved = True
+    while improved:
+        improved = False
+        for start in range(len(best) - 1):
+            for end in range(start + 1, len(best)):
+                trial = best[:start] + best[start:end + 1][::-1] + best[end + 1:]
+                trial_distance = route_distance(trial, parcel, distances)
+                trial_on_time = on_time_count(trial, parcel, distances, departure)
+                # The tolerance stops float noise from counting as an improvement.
+                better = (trial_on_time > best_on_time
+                          or (trial_on_time == best_on_time
+                              and trial_distance < best_distance - 1e-9))
+                # A route with more on-time stops can be longer, so check the limits again.
+                if better and within_limits(trial_distance, context):
+                    best = trial
+                    best_distance = trial_distance
+                    best_on_time = trial_on_time
+                    improved = True
+    return best
