@@ -159,10 +159,11 @@ Both window boundaries count as on time. A delivery before `window_start` is ear
 | --- | --- | --- | --- | --- |
 | `solution/policies/baseline.py` | Try every waiting parcel in arrival order (parcel ID breaks ties). Skip a parcel that breaks capacity, range or the return cutoff, and keep trying later ones. Delivery windows are ignored. | Visit stops in selection order. | No waiting: leave whenever at least one parcel fits. | O(n log n), for n arrived parcels |
 | `solution/policies/edf_nn.py` (Policy A) | Try waiting parcels by earliest `delivery_window_end` (parcel ID breaks ties). Skip a parcel that breaks capacity, and keep a parcel only if the nearest-neighbor tour that includes it meets the range and return cutoff. Parcels already past their window are still tried first. | Nearest neighbor from the hub. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k²), for n waiting parcels and k parcels in the trip |
+| `solution/policies/edf_nn_skip_overdue.py` (Policy A2) | Same as Policy A, except for the order parcels are tried in. A parcel is overdue if departure time + distance from the hub to its location > `delivery_window_end`. Parcels that can still be on time are tried first by earliest `delivery_window_end` (parcel ID breaks ties), then overdue parcels in the same order. | Nearest neighbor from the hub. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k²), for n waiting parcels and k parcels in the trip |
 
 The docstring of each policy file states its rules and complexity. The routing rule, timing rule and complexity of `baseline.py` are read from its code.
 
-Planned policies A2, B, C and D are described in "Policy plan". Add a row here when each is committed.
+Planned policies B, C and D are described in "Policy plan". Add a row here when each is committed.
 
 Recommended policy: [name]
 
@@ -211,7 +212,7 @@ The metrics are written to `results/edf_nn/day_001/metrics.json`.
 This loop needs bash or zsh (macOS or Linux). It runs the simulator and the performance monitor for each policy and day:
 
 ```sh
-for policy in baseline edf_nn; do
+for policy in baseline edf_nn edf_nn_skip_overdue; do
   for day in $(seq -f "day_%03g" 1 20); do
     python3 -m simulator --policy "solution.policies.$policy" \
         --data data --day "$day" \
@@ -223,7 +224,7 @@ for policy in baseline edf_nn; do
 done
 ```
 
-To include another policy, add its module name after `edf_nn` in the first line.
+To include another policy, add its module name after `edf_nn_skip_overdue` in the first line.
 
 For each policy and day it prints 8 lines: parcels, vehicles, capacity, range, scheduled events, delivered, the log path and the metrics path. It writes the two files listed in part d, overwriting any earlier run in the same folder.
 
@@ -257,8 +258,9 @@ Unweighted mean of the daily `metrics.json` values over day_001 to day_020:
 | --- | --- | --- | --- |
 | baseline | 0.2741 | 0.4045 | 16.3299 |
 | edf_nn (A) | 0.4141 | 0.7885 | 7.75 |
+| edf_nn_skip_overdue (A2) | 0.5587 | 0.7835 | 7.7313 |
 
-The `edf_nn` row comes from Marcus's run. Regenerate it with the commands in part c and replace it with the exact output. The A2 prototype (on-time rate 0.5587, delivery rate 0.7835, 7.73 km per parcel) is not listed because it is not committed yet.
+The `edf_nn` row comes from Marcus's run. Regenerate it with the commands in part c and replace it with the exact output. The `edf_nn_skip_overdue` row is the exact output of the averaging script in part c.
 
 [Add a row for each policy added to `solution/policies/`.]
 
