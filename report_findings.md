@@ -8,7 +8,7 @@ This is source material for writing the project report. It is not the report.
 
 - Every number below comes from runs of the code in this repository on day_001 to day_020. Do not invent numbers or round them differently from what is here; if a number is needed that is not here, ask for it to be computed.
 - The report is limited to **8 pages, excluding references**. Not everything here fits; prioritise by the rubric weights below.
-- The policies are baseline, A, A2, B, C, C2, D and E. An earlier B and "B2" written by Marcus were replaced by Varshni's B and C and are **not** in the repository; do not report them as policies (see section 13 for what to keep from them).
+- The policies are baseline, A, A2, A3, B, C, C2, D and E. An earlier B and "B2" written by Marcus were replaced by Varshni's B and C and are **not** in the repository; do not report them as policies (see section 13 for what to keep from them).
 - Each team member will be asked an exam question about this work (10% of the grade), so explanations should be ones a student can defend, not just state.
 
 ## 1. What the brief requires
@@ -125,6 +125,14 @@ Shared building blocks (`solution/policies/helpers.py`):
 - Idea it adds: do not spend capacity on lost causes while savable parcels are waiting.
 - Effect: late parcels fall from 282 to 145 per day, on-time rate 0.4141 → 0.5587.
 
+### 4.3b Policy A3: `edf_nn_wait.py` (A2 with Policy C's timing rules)
+
+- Selection: only parcels that can still be on time (overdue parcels are never sent), tried by earliest `window_end`. Keep a parcel only if capacity allows and the nearest-neighbor tour that includes it meets range and the cutoff **and delivers every parcel on it inside its window** (none early, none late).
+- Routing: nearest neighbor, as A and A2.
+- Timing: exactly Policy C's rules (nothing reachable in its window yet → wait; nearly empty trip with slack → wait one round).
+- Idea it tests: A2 and A3 differ only in timing; A3 and C differ only in selection and routing. So the three together split C's gain over A2 into "timing rules" and "how trips are built".
+- Weakness: deadline order pulls parcels from all over town, and nearest neighbor ignores windows, so many candidates are rejected because the tour would make some parcel early or late.
+
 ### 4.4 Policy B: `grow_2opt.py` (urgent seed, cheapest insertion, on-time-safe 2-opt)
 
 - Selection: candidates are only the parcels that **can still be on time** and fit a trip on their own; overdue parcels are never sent. Seed with the most urgent candidate (earliest `window_end`, parcel ID breaks ties). Then grow the trip one parcel at a time by **cheapest insertion**: of all parcels that can be added, take the one whose best insertion position adds the fewest km (ties: earliest window end, then parcel ID). A parcel can be added only if:
@@ -210,6 +218,7 @@ Notation: N = arrived parcels, n = candidate (waiting) parcels (n ≤ N), k = pa
 | baseline | O(N + n log n) | O(n + k) | Sort by arrival, then an O(1) check per candidate (the route is extended incrementally) |
 | A | O(N + n log n + n k²) | O(n + k) | Sort; each of n candidates may need a nearest-neighbor tour, O(k²) |
 | A2 | O(N + n log n + n k²) | O(n + k) | As A, plus an O(n) split into on-time and overdue groups |
+| A3 | O(N + n log n + n k²) | O(n + k) | As A2, plus an O(k) window check on each trial tour (dominated by the O(k²) tour) and an O(k) waiting test |
 | B | O(N + n log n + k(Lk + n) + P s²(s + k)) | O(N + k) | Filter O(N); seed O(n); bucketing O(n log n); growth: k steps, each pricing L locations at up to k + 1 positions and scanning a bucket; 2-opt: O(s²) moves per pass, each scored in O(s + k) |
 | C | As B, plus O(k) for the waiting test | O(N + k) | Same per call; but a waiting vehicle is asked again every round, so the number of calls per day rises, at most 58 × 10 = 580 |
 | C2 | As C, plus O(m log m + k(L′s + s + k)) | O(N + k) | Filling pass: bucket m overdue parcels by location, then up to k steps that each price L′ locations at s + 1 positions after an O(s + k) slack pass |
@@ -251,6 +260,7 @@ All results: 20 days, means of the daily `metrics.json` values (unweighted mean 
 | baseline | 0.2741 (0.016) | 0.2475 to 0.3118 | 0.4045 | 217 / 104 / 0 / 472 | 20.7 | 15.6 | 5204 | 16.33 |
 | A `edf_nn` | 0.4141 (0.046) | 0.3653 to 0.5051 | 0.7885 | 329 / 282 / 15 / 168 | 22.9 | 27.4 | 4840 | 7.75 |
 | A2 `edf_nn_skip_overdue` | 0.5587 (0.048) | 0.4687 to 0.6270 | 0.7835 | 443 / 145 / 33 / 172 | 23.3 | 26.8 | 4787 | 7.73 |
+| A3 `edf_nn_wait` | 0.7591 (0.055) | 0.6619 to 0.8750 | 0.7591 | 603 / 0 / 0 / 191 | 24.3 | 24.8 | 3900 | 6.49 |
 | B `grow_2opt` | 0.6117 (0.026) | 0.5665 to 0.6487 | 0.8653 | 485 / 0 / 201 / 107 | 32.5 | 21.2 | 3949 | 5.76 |
 | C without waiting (ablation) | 0.8317 (0.033) | 0.7809 to 0.8871 | 0.8317 | 660 / 0 / 0 / 134 | 32.2 | 20.5 | 3874 | 5.88 |
 | C `grow_2opt_wait` | 0.9408 (0.031) | 0.8356 to 0.9615 | 0.9408 | 746 / 0 / 0 / 47 | 28.8 | 26.0 | 3303 | 4.43 |
@@ -277,6 +287,7 @@ Fleet usage (from the `trips`, `total_km`, `capacity_utilisation` and `range_uti
 | baseline | 20.6 | 5204 | 0.4983 | 0.7883 |
 | A | 22.9 | 4840 | 0.8717 | 0.6631 |
 | A2 | 23.2 | 4787 | 0.8536 | 0.6472 |
+| A3 | 24.3 | 3900 | 0.7887 | 0.5028 |
 | B | 32.5 | 3949 | 0.6776 | 0.3805 |
 | C | 28.8 | 3303 | 0.8288 | 0.3594 |
 | C2 | 28.8 | 3325 | 0.8412 | 0.3618 |
@@ -336,7 +347,7 @@ C2's on-time rate is **identical to C's on every one of the 20 days** (the per-d
 - **D (exact routing):** over 20 days C produced 576 trips; 364 (63%) had 2 to 8 stops and were searched; UCS found a strictly shorter feasible order for only **12 of them (3.3%)**, saving 3.0 km per day in total. In the other 97% of searched trips, C's 2-opt route was already optimal. D's on-time rate equals C's on 18 days and is higher on day_010 (+0.0037) and day_015 (+0.0188); these gains come from knock-on effects (a vehicle returning a few minutes earlier is free for the next round), not from the routes themselves. The 20-day gain (+0.0011) is not significant.
 - **E (least slack first):** 0.8961, below C on 16 of 20 days (−0.045 on average, significant). With the same timing rules, picking the most urgent parcel first pulls parcels from across town, so trips drive 22% more km (4033 against 3303 per day; 5.68 against 4.43 km per parcel) and deliver 35 fewer parcels per day. But E **beats C on day_002, day_004, day_016 and day_019**, and day_004 and day_019 are C's two weakest days (the late-morning surge days). On those days urgency-first protects parcels that C's distance-first growth strands.
 
-Scratch experiment (not in the repository): giving A2 C's timing rules. Only adding a parcel if every parcel on the nearest-neighbor tour arrives inside its window gives 0.6932; adding C's wait-for-fuller-trips rule as well gives 0.7591 (A2: 0.5587, C: 0.9408). So C's advantage over A2 splits roughly in half: about +0.20 from timing rules, about +0.18 from distance-first clustered selection with deadline checks.
+**A3 (A2 + C's timing rules), now in the repository as `edf_nn_wait.py`:** 0.7591, above A2 (0.5587) on all 20 days, and below C (0.9408) on all 20 days. So C's advantage over A2 (+0.382) splits roughly in half: **+0.200 from timing rules alone** (A2 → A3) and **+0.182 from clustered, deadline-checked trip building** (A3 → C). Timing makes every delivery count; clustering is what lets C deliver 144 more parcels per day than A3 (191 never delivered per day against 47), with 15% fewer km.
 
 ### 6.5 Policy C threshold tuning (from `tune_grow_2opt_wait.py`)
 
