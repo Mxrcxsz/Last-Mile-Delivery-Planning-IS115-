@@ -66,6 +66,15 @@ def calculate_metrics(
         for a, b in zip(route, route[1:]):
             total_km += 0.0 if a == b else dist[(a, b)]
 
+    # Fleet usage: how full and how long the trips that left the hub were.
+    #   capacity_utilisation = size delivered / (trips x vehicle capacity)
+    #   range_utilisation    = km driven / (trips x vehicle range)
+    size = {row["parcel_id"]: float(row["size"]) for row in parcels}
+    load = sum(size[event["parcel_id"]] for event in deliveries)
+    number_of_trips = len(trips)
+    capacity_offered = number_of_trips * float(config["capacity"])
+    range_offered = number_of_trips * float(config["vehicle_range_km"])
+
     delivered = len(deliveries)
     return {
         "on_time_rate": round(on_time / total, 4) if total else 0.0,
@@ -76,6 +85,12 @@ def calculate_metrics(
         "parcels_early": early,
         "delivery_rate": round(delivered / total, 4) if total else 0.0,
         "km_per_delivered_parcel": round(total_km / delivered, 3) if delivered else 0.0,
+        "trips": number_of_trips,
+        "total_km": round(total_km, 3),
+        "km_per_trip": round(total_km / number_of_trips, 3) if number_of_trips else 0.0,
+        "parcels_per_trip": round(delivered / number_of_trips, 3) if number_of_trips else 0.0,
+        "capacity_utilisation": round(load / capacity_offered, 4) if capacity_offered else 0.0,
+        "range_utilisation": round(total_km / range_offered, 4) if range_offered else 0.0,
     }
 
 

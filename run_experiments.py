@@ -33,7 +33,8 @@ NOT_POLICIES = {"__init__", "helpers"}
 # Metrics shown in the summary table, in this order. Rates are averaged as daily rates.
 TABLE_KEYS = (
     "on_time_rate", "delivery_rate", "parcels_on_time", "parcels_late",
-    "parcels_early", "km_per_delivered_parcel",
+    "parcels_early", "km_per_delivered_parcel", "trips", "total_km",
+    "parcels_per_trip", "capacity_utilisation", "range_utilisation",
 )
 
 
@@ -123,7 +124,8 @@ def print_summary(results: Path, policies: List[str], days: List[str], per_day: 
         rows.append((row, metrics))
 
     header = (f"{'policy':<22}{'days':>5}{'on_time':>9}{'sd':>8}{'deliv':>8}"
-              f"{'on_time#':>10}{'late#':>8}{'early#':>8}{'km/parcel':>11}{'>base':>7}")
+              f"{'on_time#':>10}{'late#':>8}{'early#':>8}{'km/parcel':>11}{'trips':>7}"
+              f"{'km/day':>9}{'cap_use':>9}{'rng_use':>9}{'>base':>7}")
     print()
     print(header)
     print("-" * len(header))
@@ -134,9 +136,13 @@ def print_summary(results: Path, policies: List[str], days: List[str], per_day: 
               f"{row['on_time_rate_sd']:>8.4f}{row['delivery_rate']:>8.4f}"
               f"{row['parcels_on_time']:>10.1f}{row['parcels_late']:>8.1f}"
               f"{row['parcels_early']:>8.1f}{row['km_per_delivered_parcel']:>11.3f}"
+              f"{row['trips']:>7.1f}{row['total_km']:>9.0f}"
+              f"{row['capacity_utilisation']:>9.4f}{row['range_utilisation']:>9.4f}"
               f"{beat_text:>7}")
-    print("on_time, deliv and km/parcel are means of the daily values; # columns are "
-          "parcels per day; >base = days with a higher on_time_rate than baseline.")
+    print("on_time, deliv, km/parcel, cap_use and rng_use are means of the daily values; "
+          "# columns, trips and km/day are per day;\ncap_use = share of trip capacity filled, "
+          "rng_use = share of trip range driven; >base = days with a higher on_time_rate "
+          "than baseline.")
 
     if per_day and rows:
         print()
