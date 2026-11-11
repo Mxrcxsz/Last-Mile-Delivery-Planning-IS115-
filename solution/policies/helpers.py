@@ -4,8 +4,7 @@ import math
 from typing import Dict, List
 
 from simulator.models import Parcel, SimulationContext
-
-HUB = "HUB"
+from simulator.simulator import HUB, MINUTES_PER_KM
 
 
 def waiting_parcels(parcel: Dict[str, Parcel]) -> List[str]:
@@ -37,10 +36,9 @@ def route_distance(
 def within_limits(distance: float, context: SimulationContext) -> bool:
     """Return True if a trip of this many km meets the range and return-cutoff rules. O(1)."""
 
-    # At 60 km/h, km also equals travel time in minutes.
     departure = context["current_time"] + context["departure_delay"]
     return (distance <= context["max_trip_distance_km"]
-            and departure + distance <= context["return_cutoff"])
+            and departure + distance * MINUTES_PER_KM <= context["return_cutoff"])
 
 
 def nearest_neighbor_order(
