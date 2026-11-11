@@ -8,7 +8,7 @@ This is source material for writing the project report. It is not the report.
 
 - Every number below comes from runs of the code in this repository on day_001 to day_020. Do not invent numbers or round them differently from what is here; if a number is needed that is not here, ask for it to be computed.
 - The report is limited to **8 pages, excluding references**. Not everything here fits; prioritise by the rubric weights below.
-- The policies are baseline, A, A2, B, C and C2. An earlier B and "B2" written by Marcus were replaced by Varshni's B and C and are **not** in the repository; do not report them as policies (see section 13 for what to keep from them).
+- The policies are baseline, A, A2, B, C, C2, D and E. An earlier B and "B2" written by Marcus were replaced by Varshni's B and C and are **not** in the repository; do not report them as policies (see section 13 for what to keep from them).
 - Each team member will be asked an exam question about this work (10% of the grade), so explanations should be ones a student can defend, not just state.
 
 ## 1. What the brief requires
@@ -30,7 +30,7 @@ Requirements from the brief that the report must visibly satisfy:
 1. Choose a performance metric, justify why it matters for last-mile delivery, and define how it is calculated, including assumptions. **"Any metric that leads to a trivial approach will receive zero marks."**
 2. Establish baseline performance with the supplied `baseline.py`.
 3. Propose **several** dispatch policies, analyse their **time and space** complexity, assess **advantages and limitations**, discuss **trade-offs**, explain **where each approach performs well or poorly**, and **recommend a final approach**.
-4. The solution must **meaningfully incorporate at least one algorithm and one data structure taught in class** (see section 4.8; check against the IS115 syllabus).
+4. The solution must **meaningfully incorporate at least one algorithm and one data structure taught in class** (see section 4.10; check against the IS115 syllabus).
 5. Report sections: problem statement and motivation, algorithmic approaches, computational complexity, experimental results, conclusion, references.
 
 ## 2. Problem setting
@@ -158,11 +158,31 @@ Shared building blocks (`solution/policies/helpers.py`):
 - Note: an overdue parcel cannot be delivered early: by definition even a direct drive arrives after its window closes, so any delivery is late.
 - Data structure: a second location → deadline-sorted bucket map, for the overdue parcels.
 
-### 4.7 Ablation (not a submitted policy): C without the waiting rule
+### 4.7 Policy D: `ucs_routing.py` (Policy C with exact routing by uniform-cost search)
+
+- Selection and timing: exactly Policy C.
+- Routing: C's trip is grouped into one stop per location. Each stop gets an arrival interval [latest window start, earliest window end] of its parcels (if that interval is empty, C's route is kept). If the trip has **at most 8 stops**, uniform-cost search finds the shortest order that arrives at every stop inside its interval and returns to the hub:
+  - state = (current location, set of visited stops as a bitmask); cost = km driven so far;
+  - at 60 km/h km equals minutes, so the cost also gives the arrival time; a move is allowed only if it arrives inside the next stop's interval;
+  - states are expanded cheapest first from a **min-heap**, so the first complete tour popped is the shortest feasible one (Dijkstra's algorithm on the state graph);
+  - C's own 2-opt route is feasible, so its length is an upper bound: a partial tour that cannot get back to the hub in fewer km is pruned;
+  - the new order is used only if it is strictly shorter than C's.
+- Why states with the same (location, visited set) are **not** merged: with time windows and no waiting at stops, arriving later can make a later stop feasible, so the cheaper path does not dominate. This is a correctness point worth one sentence in the report.
+- Why the cap: the number of orders grows as s!, so exact routing is exponential in the number of stops. 71% of C's trips have at most 8 stops (measured over all 20 days).
+- Idea it tests: how much does an optimal stop order gain over 2-opt, everything else equal?
+
+### 4.8 Policy E: `least_slack.py` (least slack first from a min-heap, with C's timing)
+
+- Selection: candidates as in C. A parcel's **slack** = window end − (departure + direct drive from the hub): minutes it can still afford to wait. Seed: the least-slack parcel a direct drive reaches inside its window. All other candidates go into a **min-heap** keyed by (slack, window end, parcel ID) and are popped most urgent first. Each popped parcel is inserted at its cheapest feasible position (arrives inside its window, no on-time parcel pushed late, capacity, range and cutoff hold), or skipped.
+- Routing: insertion order, then C's 2-opt.
+- Timing: exactly Policy C (no early deliveries; wait for fuller trips when that is free).
+- Idea it tests: **urgency-first** selection (a classic scheduling rule, "least laxity first") against C's **distance-first** selection, everything else equal.
+
+### 4.9 Ablation (not a submitted policy): C without the waiting rule
 
 C with `MIN_FILL = 0`, so the "nearly empty" rule never fires and only the "no early delivery" rule remains. Used to split C's gain between its two ideas. The same setting appears as the `MIN_FILL = 0.0` rows of `tune_grow_2opt_wait.py`. The full 20-day run in section 6 was made from a scratch module outside the repository (see section 11).
 
-### 4.8 Algorithms and data structures used (for the "taught in class" requirement)
+### 4.10 Algorithms and data structures used (for the "taught in class" requirement)
 
 Check these against the IS115 syllabus and name the course topics explicitly in the report.
 
@@ -171,12 +191,15 @@ Check these against the IS115 syllabus and name the course topics explicitly in 
 | Sorting (Python's Timsort, O(n log n)) | Deadline order in A and A2; deadline-sorted location buckets in B and C |
 | Greedy algorithms | Every policy builds a trip greedily (EDF selection; nearest neighbor; cheapest insertion, twice in C2) |
 | Local search | 2-opt in B and C |
+| Graph search: uniform-cost search (Dijkstra on the state graph) | Exact routing in D |
+| Priority queue (binary min-heap, `heapq`) | UCS frontier in D; least-slack order in E |
+| Bitmask as a set | Visited stops in D's search states |
 | Hash tables (`dict`) | `parcel` records; distance lookup `travel_distance[origin][destination]`; **location → sorted parcel list** buckets in B and C, O(1) average access |
 | Lists / arrays | Routes, candidate lists, the slack array in `grow_trip` |
 | Graph (complete weighted graph stored as an adjacency matrix in nested dicts) | The distance lookup; routing is a TSP-style tour on this graph |
 | Grid search with a tuning/test split | Choosing C's two thresholds |
 
-Not used: a heap or priority queue, or a graph search such as uniform-cost search. The optional Policy D (`ucs_routing`) in the README plan would add both if the syllabus requirement needs them; it is not implemented.
+Policies D and E add a priority queue (heap) and a graph search (uniform-cost search), so the report can name sorting, greedy, local search, graph search, hash tables and heaps.
 
 ## 5. Computational complexity
 
@@ -190,6 +213,8 @@ Notation: N = arrived parcels, n = candidate (waiting) parcels (n ≤ N), k = pa
 | B | O(N + n log n + k(Lk + n) + P s²(s + k)) | O(N + k) | Filter O(N); seed O(n); bucketing O(n log n); growth: k steps, each pricing L locations at up to k + 1 positions and scanning a bucket; 2-opt: O(s²) moves per pass, each scored in O(s + k) |
 | C | As B, plus O(k) for the waiting test | O(N + k) | Same per call; but a waiting vehicle is asked again every round, so the number of calls per day rises, at most 58 × 10 = 580 |
 | C2 | As C, plus O(m log m + k(L′s + s + k)) | O(N + k) | Filling pass: bucket m overdue parcels by location, then up to k steps that each price L′ locations at s + 1 positions after an O(s + k) slack pass |
+| D | As C, plus O(s! · s · log(s! · s)) | O(N + s! · s) | The search: at most s! partial orders, each expanded in O(s) with O(log) heap operations. Capped at s ≤ 8 stops, so a constant (8! = 40,320) in practice; exponential without the cap |
+| E | O(N + n log n + n(s + k) + P s²(s + k)) | O(N + k) | Heapify O(n); n pops O(n log n); each popped parcel priced at s + 1 positions after an O(s + k) arrival/slack pass; then 2-opt |
 
 Points to discuss:
 
@@ -211,6 +236,8 @@ Measured runtime (whole simulator plus performance monitor, 20 days, run one aft
 | C without waiting (ablation) | 18.1 s |
 | C | 25.5 s |
 
+A second session timed C, D and E with the simulator only (no performance monitor): C 20.3 s, **D 22.7 s**, **E 13.4 s** for 20 days. D costs about 12% more than C for its exact search. E is the fastest of the three: its heap selection costs O(n log n + n(s + k)), against C's O(k(Lk + n)) cheapest-insertion search.
+
 Every policy runs a full day in under 1.3 s, far below the 10-minute planning interval. B costs about 1.7× A2, consistent with the insertion search and 2-opt. C costs about 1.4× B because waiting vehicles are re-planned every round (more `dispatch` calls), which matches the complexity analysis. Timings vary between sessions by up to about 30%, so compare only within a session.
 
 ## 6. Experimental results
@@ -228,6 +255,8 @@ All results: 20 days, means of the daily `metrics.json` values (unweighted mean 
 | C without waiting (ablation) | 0.8317 (0.033) | 0.7809 to 0.8871 | 0.8317 | 660 / 0 / 0 / 134 | 32.2 | 20.5 | 3874 | 5.88 |
 | C `grow_2opt_wait` | 0.9408 (0.031) | 0.8356 to 0.9615 | 0.9408 | 746 / 0 / 0 / 47 | 28.8 | 26.0 | 3303 | 4.43 |
 | **C2 `grow_2opt_wait_fill`** | **0.9408 (0.030)** | **0.8356 to 0.9615** | **0.9546** | **746 / 11 / 0 / 36** | **28.8** | **26.4** | **3325** | **4.39** |
+| D `ucs_routing` | 0.9419 (0.031) | 0.8356 to 0.9615 | 0.9419 | 747 / 0 / 0 / 46 | 28.8 | 26.0 | 3302 | 4.43 |
+| E `least_slack` | 0.8961 (0.034) | 0.8296 to 0.9598 | 0.8961 | 711 / 0 / 0 / 82 | 28.2 | 25.3 | 4033 | 5.68 |
 
 Average earliness and lateness of the parcels that were early or late (minutes):
 
@@ -251,6 +280,8 @@ Fleet usage (from the `trips`, `total_km`, `capacity_utilisation` and `range_uti
 | B | 32.5 | 3949 | 0.6776 | 0.3805 |
 | C | 28.8 | 3303 | 0.8288 | 0.3594 |
 | C2 | 28.8 | 3325 | 0.8412 | 0.3618 |
+| D | 28.8 | 3302 | 0.8284 | 0.3587 |
+| E | 28.2 | 4033 | 0.8070 | 0.4484 |
 
 Reading it:
 
@@ -270,6 +301,8 @@ Reading it:
 | C vs C without waiting | +0.1091 | +0.019 to +0.175 | 20/20 | < 0.001 | 11.68 |
 | C vs B | +0.3291 | +0.187 to +0.390 | 20/20 | < 0.001 | 31.11 |
 | C vs A2 | +0.3821 | +0.247 to +0.485 | 20/20 | < 0.001 | 27.08 |
+| D vs C | +0.0011 | 0 to +0.019 | 2/20 (18 ties, 0 losses) | 0.50 | 1.19 |
+| E vs C | −0.0447 | −0.126 to +0.024 | 4/20 (16 losses) | 0.012 | −5.04 |
 
 C2's on-time rate is **identical to C's on every one of the 20 days** (the per-day column below applies to both). Its delivery rate is higher on average: 0.9546 against 0.9408.
 
@@ -298,7 +331,14 @@ C2's on-time rate is **identical to C's on every one of the 20 days** (the per-d
 | day_019 | 0.2823 | 0.3952 | 0.5885 | 0.6487 | 0.8168 | 0.8356 |
 | day_020 | 0.2711 | 0.3824 | 0.5614 | 0.5665 | 0.7916 | 0.9565 |
 
-### 6.4 Policy C threshold tuning (from `tune_grow_2opt_wait.py`)
+### 6.4 Policies D and E against C
+
+- **D (exact routing):** over 20 days C produced 576 trips; 364 (63%) had 2 to 8 stops and were searched; UCS found a strictly shorter feasible order for only **12 of them (3.3%)**, saving 3.0 km per day in total. In the other 97% of searched trips, C's 2-opt route was already optimal. D's on-time rate equals C's on 18 days and is higher on day_010 (+0.0037) and day_015 (+0.0188); these gains come from knock-on effects (a vehicle returning a few minutes earlier is free for the next round), not from the routes themselves. The 20-day gain (+0.0011) is not significant.
+- **E (least slack first):** 0.8961, below C on 16 of 20 days (−0.045 on average, significant). With the same timing rules, picking the most urgent parcel first pulls parcels from across town, so trips drive 22% more km (4033 against 3303 per day; 5.68 against 4.43 km per parcel) and deliver 35 fewer parcels per day. But E **beats C on day_002, day_004, day_016 and day_019**, and day_004 and day_019 are C's two weakest days (the late-morning surge days). On those days urgency-first protects parcels that C's distance-first growth strands.
+
+Scratch experiment (not in the repository): giving A2 C's timing rules. Only adding a parcel if every parcel on the nearest-neighbor tour arrives inside its window gives 0.6932; adding C's wait-for-fuller-trips rule as well gives 0.7591 (A2: 0.5587, C: 0.9408). So C's advantage over A2 splits roughly in half: about +0.20 from timing rules, about +0.18 from distance-first clustered selection with deadline checks.
+
+### 6.5 Policy C threshold tuning (from `tune_grow_2opt_wait.py`)
 
 Mean on-time rate of C for each setting, on the tuning days (day_001 to day_010) and the test days (day_011 to day_020). The setting was chosen by the tuning column only.
 
@@ -332,6 +372,8 @@ Reading it:
 6. **Late deliveries can be added for free.** C2 rides overdue parcels on C's trips only where the detour delays no on-time parcel. On-time rate is unchanged on every day, 11 more parcels per day are delivered (late), never-delivered parcels fall from 47 to 36, and km per delivered parcel even improves slightly (4.43 → 4.39) because the extra parcels mostly join stops already on the route. Total km per day rises only 0.7% (3303 → 3325).
 7. **The best policy is also the cheapest.** C beats every other policy on the metric **and** on km per delivered parcel. Better timing removed wasted trips rather than adding cost.
 8. **Remaining gap.** C reaches 0.9408 against an optimistic ceiling of about 0.9646 (97.5% of it). It leaves 47 parcels undelivered per day; about 28 of those could not have been on time under any policy, leaving roughly 19 per day that a better policy might save.
+9. **Optimal routing buys almost nothing here.** Exact uniform-cost search (D) found a shorter order than 2-opt on only 3.3% of searched trips, saving 3 km per day, and changed the on-time rate on 2 of 20 days. Routing is not the bottleneck: trips use only about 36% of their range, and 2-opt is already optimal on almost every trip. Selection and timing decide the result.
+10. **Distance-first beats urgency-first, except on surge days.** Least slack first from a heap (E) scores 0.8961 against C's 0.9408 with the same timing rules: urgency-first selection drives 22% more km. But E wins on C's two weakest days (day_004, day_019), which points to a hybrid (urgency-first when many parcels are close to their deadline, distance-first otherwise) as the most promising next step. Not implemented.
 
 Where each approach performs well or poorly (the brief asks for this):
 
@@ -351,6 +393,7 @@ Where each approach performs well or poorly (the brief asks for this):
 
 - **Recommended policy: C2 `grow_2opt_wait_fill`** (or C, if the team prefers the simpler policy). Both have the highest on-time rate (0.9408) and beat every earlier policy on all 20 days. C2 matches C's on-time rate on every day and also delivers 11 more parcels per day (delivery rate 0.9546), with the lowest km per delivered parcel (4.39). It is the better choice for a real operator, since it serves more customers at no cost to punctuality.
 - If the report recommends C2, state clearly that C2's gain is on delivery rate, not on the headline metric.
+- D and E are not recommended: D matches C at higher cost, and E scores lower. Both are valuable as experiments: D shows routing is not the bottleneck, E shows distance-first selection matters except on surge days.
 - Conclusion themes: choose parcels that are close together; never spend capacity on lost causes; never deliver early when the metric does not reward it; do not send nearly empty trips when waiting is free; the best policy for service was also the cheapest to run.
 
 ## 10. Limitations and threats to validity
@@ -384,7 +427,7 @@ Not yet reproducible from the repository: the full 20-day run of "C without wait
 - Decide whether to add the analysis script (paired tests, upper bound, per-day tables) and the "C without waiting" ablation to the repository, so every number in the report can be reproduced.
 - Confirm which "algorithm and data structure taught in class" the report will name, against the syllabus.
 - README "Recommended policy: [name]" still needs filling in (C, if the team agrees).
-- Policy D (optional) is not implemented.
+- Policy D and E are implemented; a hybrid of C and E (section 7, finding 10) is not.
 - References still need to be added (candidates below).
 
 ## 13. Design history worth one paragraph (optional)
