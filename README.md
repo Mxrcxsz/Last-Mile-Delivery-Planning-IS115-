@@ -205,7 +205,7 @@ The metrics are written to `results/grow_2opt_wait_fill/day_001/metrics.json`. T
 
 ### c. All policies on all 20 days
 
-The quickest way, on any operating system, is the experiment runner. It does exactly what the two commands above do for every policy and day (same `log.txt` and `metrics.json`), runs days in parallel, then prints the comparison table and writes `results/summary.csv` and `results/summary_per_day.csv`:
+The quickest way, on any operating system, is the experiment runner. It does exactly what the two commands above do for every policy and day (same `log.txt` and `metrics.json`), runs days in parallel, then prints the comparison table and writes `results/summary.csv`, `results/summary_per_day.csv` and `results/summary.json`:
 
 ```sh
 python3 run_experiments.py                                   # every policy in solution/policies/, all 20 days
@@ -260,6 +260,9 @@ It prints one line per policy: the policy name, the number of days, then the thr
 
 - `results/<policy>/day_XXX/log.txt`: event log, written by the simulator.
 - `results/<policy>/day_XXX/metrics.json`: metrics, written by the performance monitor.
+- `results/<policy>/day_XXX/timing.json`: written by `run_experiments.py` only: number of `dispatch()` calls, how many returned `[]`, and the time spent inside the policy (total, mean and slowest call). Machine-dependent; run with `--workers 1` for clean timings.
+- `results/summary.json`: every policy over all days, written by `run_experiments.py` (also with `--summary-only`). Per policy: rank by mean on-time rate; mean, sample standard deviation, min and max (with the day) of every metric; daily on-time comparison against the baseline and against the top policy (`days_better`, `days_equal`, `days_worse`, mean difference). Also a `runtime` section per policy, from the `timing.json` files. Daily values are in `summary_per_day.csv` and each day's `metrics.json`.
+- `results/summary.csv` and `results/summary_per_day.csv`: the same table as printed, and one row per policy and day.
 
 ## Results summary
 

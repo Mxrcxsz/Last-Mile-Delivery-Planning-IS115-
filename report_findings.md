@@ -184,20 +184,26 @@ Points to discuss:
 - 2-opt works on distinct stops (s), not parcels (k), since parcels at one stop are delivered together.
 - Each move is scored in full (O(s + k)), not with the classic O(1) four-edge delta, because the interface describes distances as directed (reversing a segment reverses its legs) and the on-time count depends on the arrival time at every later stop. (In this data the matrix is in fact symmetric.)
 - P is not bounded by a polynomial in theory (each kept move strictly shortens the trip and there are finitely many orders), but is small in practice; a pass cap would make the bound strict.
-- C trades B's O(k(Lk + n)) cheapest-insertion search for O(n log n + n(s + k)) heap selection.
+- C trades B's O(k(Lk + n)) cheapest-insertion search for O(n log n + n(s + k)) heap selection. With n in the hundreds and L ≤ 36, that is more work in practice, not less (measured below).
 - Waiting does not change the cost of one call, but a waiting vehicle is asked again every round, so the number of calls per day rises, to at most 58 × 10 = 580.
 
-Measured runtime (simulator only, 20 days, run one after another in one session on a MacBook, including Python start-up; rough):
+Measured runtime: time spent inside each policy's `dispatch()` only (not the simulator, the performance monitor or Python start-up), from `python3 run_experiments.py --workers 1` on a MacBook. Per-day values are in `results/<policy>/<day>/timing.json`; the means are in the `runtime` section of `results/summary.json`. Timings depend on the machine and vary between runs; compare policies within one run.
 
-| Policy | Wall time for 20 days |
-| --- | --- |
-| baseline | 5.4 s |
-| A | 20.2 s |
-| B | 32.6 s |
-| C | 18.5 s |
-| D | 39.2 s |
+| Policy | `dispatch()` calls per day | of which waits (`[]`) | Policy time per day | Mean per call | Slowest call |
+| --- | --- | --- | --- | --- | --- |
+| baseline | 30.7 | 10.1 | 0.009 s | 0.28 ms | 9.9 ms |
+| A | 140.1 | 115.8 | 0.083 s | 0.59 ms | 57.7 ms |
+| B | 184.8 | 156.1 | 0.206 s | 1.12 ms | 101.3 ms |
+| C | 117.0 | 88.9 | 0.259 s | 2.21 ms | 161.4 ms |
+| D | 184.8 | 156.0 | 0.486 s | 2.63 ms | 324.2 ms |
 
-Every policy runs a full day in about 2 s or less, far below the 10-minute planning interval. D costs about 20% more than B for its exact search. C is the fastest of B, C and D, as its complexity predicts. A is slower than its simple rules suggest because each candidate builds a nearest-neighbor tour (the n k² term) and waiting vehicles are re-planned every round. Timings varied by up to about 60% between sessions on this laptop, so compare only within one session.
+Reading it:
+
+- **Compute is negligible.** Even D spends under half a second per day inside the policy, and its slowest single call (324 ms) is far below the 10-minute planning interval. Earlier wall-clock timings of 20 to 40 s per 20 days were almost entirely the simulator and Python start-up.
+- **Waiting multiplies the calls.** Policies with the waiting rule are called 117 to 185 times per day against 31 for the baseline, and most calls (76 to 84%) return `[]`. The complexity per call is unchanged, but the number of calls rises, as section 5 predicts.
+- **The location buckets pay off.** C (heap, urgency first) costs about twice as much per call as B (2.21 ms against 1.12 ms), although its heap selection looks cheaper on paper. C prices every popped candidate with an O(s + k) timing pass, so its selection is O(n(s + k)) over n parcels, while B's buckets price each of at most L ≤ 36 locations once per position. With hundreds of waiting parcels and only 36 locations, n ≫ L, so B's bucketed cheapest insertion is the cheaper one in practice.
+- **Exact routing costs about 2.4× B per day** (0.486 s against 0.206 s), for no meaningful on-time gain (section 6.4). Its slowest call (324 ms) is the factorial search on an 8-stop trip.
+- **A** is cheap per call (0.59 ms) despite its n k² worst case, because its trips are built from a sorted list with few accepted parcels.
 
 ## 6. Experimental results
 
@@ -348,8 +354,8 @@ Trade-offs:
 
 ## 9. Recommendation and conclusion points
 
-- **Recommended policy: B `grow_2opt_wait_fill`.** On-time rate 0.9408, best delivery rate (0.9546), lowest km per delivered parcel (4.39, tied with D), about 1.6 s per day.
-- **Why not D**, although its mean is 0.0011 higher: the difference is on 2 days only, not significant, comes from knock-on timing rather than better routes, costs about 20% more runtime and needs an exponential search with a cap. If the team prefers D, the report must say all of this.
+- **Recommended policy: B `grow_2opt_wait_fill`.** On-time rate 0.9408, best delivery rate (0.9546), lowest km per delivered parcel (4.39, tied with D), about 0.2 s of policy time per day.
+- **Why not D**, although its mean is 0.0011 higher: the difference is on 2 days only, not significant, comes from knock-on timing rather than better routes, costs about 2.4× B's policy time per day (still under half a second) and needs an exponential search with a cap. If the team prefers D, the report must say all of this.
 - C and A are valuable as comparisons: C shows distance-first selection matters except on surge days; A shows timing rules alone are worth a lot but not enough.
 - Conclusion themes: choose parcels that are close together; never spend capacity on lost causes; never deliver early when the metric does not reward it; do not send nearly empty trips when waiting is free; let late parcels ride along only when it costs nothing; routing quality matters far less than selection and timing.
 
@@ -359,7 +365,7 @@ Trade-offs:
 - Every policy plans one vehicle's trip at a time, with no coordination across vehicles or look-ahead to future arrivals.
 - 2-opt is a local search: it stops at a route that no single reversal improves.
 - B's thresholds were tuned on day_001 to day_010; the reported 20-day mean (0.9408) includes those days. The test-day mean alone is 0.9424. A, C and D reuse B's thresholds without separate tuning.
-- Runtimes are wall-clock times including the simulator and Python start-up, from single runs on one laptop, and varied by up to about 60% between sessions.
+- Runtimes are from single runs on one laptop and depend on the machine; only the relative costs should be quoted.
 - The upper bound in section 2 ignores fleet size and capacity, so the true ceiling is lower.
 - The cause of B's weak days (section 8) is an observation, not a tested explanation.
 
@@ -373,7 +379,7 @@ python3 run_experiments.py --policies grow_2opt_wait_fill ucs_routing
 python3 tune_grow_2opt_wait_fill.py                               # Policy B threshold grid search (about 2.5 min)
 ```
 
-Outputs: `results/<policy>/day_XXX/log.txt` and `metrics.json`, `results/summary.csv`, `results/summary_per_day.csv`, `results/tuning_grow_2opt_wait_fill.csv`. Runs are deterministic: repeating a command gives byte-for-byte identical logs. After the merge into four files, Policies A and B produce byte-for-byte the same logs as before.
+Outputs: `results/<policy>/day_XXX/log.txt`, `metrics.json` and `timing.json`, `results/summary.csv`, `results/summary_per_day.csv`, `results/summary.json`, `results/tuning_grow_2opt_wait_fill.csv`. Runs are deterministic: repeating a command gives byte-for-byte identical logs and metrics; only the timings change. Use `--workers 1` for the timings. After the merge into four files, Policies A and B produce byte-for-byte the same logs as before.
 
 To reproduce the design-history steps 1, 2, 4 and 6 (section 7): `git checkout 92948fd`, then `python3 run_experiments.py --policies edf_nn edf_nn_skip_overdue grow_2opt grow_2opt_wait`.
 
