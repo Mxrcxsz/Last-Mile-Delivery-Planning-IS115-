@@ -3,17 +3,25 @@
 For each policy and day this does exactly what the two README commands do:
 it runs the simulator (writing results/<policy>/<day>/log.txt) and then the
 performance monitor (writing metrics.json beside the log). Afterwards it prints
-the mean of every metric per policy and writes results/summary.csv.
+the mean of every metric per policy and writes results/summary.csv, summary_per_day.csv
+and summary.json.
 
 Examples, from the project root:
 
     python3 run_experiments.py                                  # every policy, all 20 days
-    python3 run_experiments.py --policies baseline grow_2opt    # selected policies
-    python3 run_experiments.py --policies grow_2opt --days 1-5  # day_001 to day_005
+    python3 run_experiments.py --policies baseline grow_2opt_wait_fill  # selected policies
+    python3 run_experiments.py --policies edf_nn_wait --days 1-5      # day_001 to day_005
     python3 run_experiments.py --summary-only                   # re-print the table from existing results
     python3 run_experiments.py --per-day                        # also print one row per day
 
-Standard library only. Runs are deterministic, so repeating a command gives the same files.
+Each run also writes timing.json beside the log: how many times the policy's dispatch()
+was called, how many calls returned [] (wait), and the time spent inside dispatch() only
+(not the simulator or the performance monitor). Use --workers 1 for clean timings, since
+parallel runs compete for the CPU.
+
+Standard library only. Runs are deterministic, so repeating a command gives the same log.txt,
+metrics.json, summary.csv and summary_per_day.csv. Timings (timing.json and the runtime
+section of summary.json) depend on the machine and change from run to run.
 """
 
 import argparse
@@ -23,7 +31,7 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from statistics import mean, pstdev
+from statistics import mean, pstdev, stdev
 from typing import Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parent
@@ -75,11 +83,30 @@ def run_one(task: Tuple[str, str, str, str]) -> Tuple[str, str, float, Optional[
     try:
         output = Path(results) / policy / day
         parcels, distances, config = day_input_paths(Path(data), day)
-        simulator = Simulator(
-            parcels, distances, config,
-            dispatch_policy=load_policy(f"solution.policies.{policy}"),
-        )
+        dispatch = load_policy(f"solution.policies.{policy}")
+        timing = {"dispatch_calls": 0, "wait_calls": 0, "seconds": 0.0, "max_seconds": 0.0}
+
+        def timed_dispatch(parcel, context):
+            """Call the policy and time only the policy's own work."""
+            call_started = time.perf_counter()
+            route = dispatch(parcel, context)
+            elapsed = time.perf_counter() - call_started
+            timing["dispatch_calls"] += 1
+            timing["wait_calls"] += not route
+            timing["seconds"] += elapsed
+            timing["max_seconds"] = max(timing["max_seconds"], elapsed)
+            return route
+
+        simulator = Simulator(parcels, distances, config, dispatch_policy=timed_dispatch)
         simulator.run(output / "log.txt")
+        calls = timing["dispatch_calls"]
+        (output / "timing.json").write_text(json.dumps({
+            "dispatch_calls": calls,
+            "wait_calls": timing["wait_calls"],
+            "dispatch_seconds": round(timing["seconds"], 4),
+            "mean_ms_per_call": round(1000 * timing["seconds"] / calls, 4) if calls else 0.0,
+            "max_ms_per_call": round(1000 * timing["max_seconds"], 4),
+        }, indent=2) + "\n", encoding="utf-8")
         status = performance_monitor.main(
             ["--data", data, "--day", day, "--log", str(output / "log.txt")]
         )
@@ -171,6 +198,120 @@ def print_summary(results: Path, policies: List[str], days: List[str], per_day: 
     print(f"\nWrote {results / 'summary.csv'} and {results / 'summary_per_day.csv'}")
 
 
+def compare(metrics: Dict[str, Dict[str, float]], other: Dict[str, Dict[str, float]]) -> dict:
+    """Return the daily on_time_rate difference of metrics minus other, on shared days."""
+
+    shared = [day for day in metrics if day in other]
+    diffs = [metrics[d]["on_time_rate"] - other[d]["on_time_rate"] for d in shared]
+    if not diffs:
+        return {}
+    return {
+        "days_compared": len(diffs),
+        "mean_difference": round(mean(diffs), 4),
+        "min_difference": round(min(diffs), 4),
+        "max_difference": round(max(diffs), 4),
+        "days_better": sum(d > 0 for d in diffs),
+        "days_equal": sum(d == 0 for d in diffs),
+        "days_worse": sum(d < 0 for d in diffs),
+    }
+
+
+def load_timing(results: Path, policy: str, days: List[str]) -> Dict[str, Dict[str, float]]:
+    """Read timing.json for each day that has one."""
+
+    found = {}
+    for day in days:
+        path = results / policy / day / "timing.json"
+        if path.exists():
+            found[day] = json.loads(path.read_text(encoding="utf-8"))
+    return found
+
+
+def runtime_summary(timing: Dict[str, Dict[str, float]]) -> Optional[dict]:
+    """Aggregate per-day dispatch timings: calls and seconds per day, ms per call."""
+
+    if not timing:
+        return None
+    calls = sum(t["dispatch_calls"] for t in timing.values())
+    seconds = sum(t["dispatch_seconds"] for t in timing.values())
+    slowest = max(timing, key=lambda d: timing[d]["max_ms_per_call"])
+    return {
+        "days_timed": len(timing),
+        "dispatch_calls_per_day": round(calls / len(timing), 1),
+        "wait_calls_per_day": round(sum(t["wait_calls"] for t in timing.values()) / len(timing), 1),
+        "dispatch_seconds_per_day": round(seconds / len(timing), 4),
+        "mean_ms_per_call": round(1000 * seconds / calls, 4) if calls else 0.0,
+        "max_ms_per_call": timing[slowest]["max_ms_per_call"],
+        "max_ms_day": slowest,
+    }
+
+
+def write_json_summary(results: Path, policies: List[str], days: List[str]) -> None:
+    """Write results/summary.json: per-policy statistics, comparisons and ranking.
+
+    The file has no timestamp, so the same results always give the same file.
+    """
+
+    loaded = {p: load_metrics(results, p, days) for p in policies}
+    loaded = {p: m for p, m in loaded.items() if m}
+    if not loaded:
+        return
+    ranking = sorted(loaded, key=lambda p: -mean(m["on_time_rate"] for m in loaded[p].values()))
+    top = ranking[0]
+
+    summary = {}
+    for policy, metrics in loaded.items():
+        keys = [k for k, v in next(iter(metrics.values())).items() if isinstance(v, (int, float))]
+        stats = {}
+        for key in keys:
+            values = {day: m[key] for day, m in metrics.items()}
+            low = min(values, key=values.get)
+            high = max(values, key=values.get)
+            stats[key] = {
+                "mean": round(mean(values.values()), 4),
+                "sd": round(stdev(values.values()), 4) if len(values) > 1 else 0.0,
+                "min": values[low], "min_day": low,
+                "max": values[high], "max_day": high,
+            }
+        summary[policy] = {
+            "rank": ranking.index(policy) + 1,
+            "days": len(metrics),
+            "metrics": stats,
+            "vs_baseline": compare(metrics, loaded["baseline"]) if "baseline" in loaded and policy != "baseline" else None,
+            "vs_top": compare(metrics, loaded[top]) if policy != top else None,
+            "runtime": runtime_summary(load_timing(results, policy, days)),
+        }
+
+    report = {
+        "description": "Results of every policy over the selected days, from results/<policy>/<day>/metrics.json.",
+        "headline_metric": "on_time_rate = parcels delivered inside [window_start, window_end] / all parcels of the day",
+        "notes": [
+            "mean, sd, min and max are over days; sd is the sample standard deviation (n - 1).",
+            "vs_baseline and vs_top compare daily on_time_rate: this policy minus the other.",
+            "top_policy_by_on_time_rate is the highest mean only; it is not a recommendation.",
+            "runtime times only the policy's dispatch() calls, from each day's timing.json. It "
+            "depends on the machine and changes between runs; compare policies within one run.",
+            "rank orders policies by mean on_time_rate, highest first.",
+        ],
+        "days": days,
+        "ranking": ranking,
+        "top_policy_by_on_time_rate": top,
+        "policies": summary,
+    }
+    path = results / "summary.json"
+    path.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+
+    timed = [(p, summary[p]["runtime"]) for p in policies if p in summary and summary[p]["runtime"]]
+    if timed:
+        print(f"\n{'policy':<22}{'calls/day':>11}{'waits/day':>11}{'s/day':>9}{'ms/call':>10}{'max ms':>9}")
+        for policy, r in timed:
+            print(f"{policy:<22}{r['dispatch_calls_per_day']:>11.1f}{r['wait_calls_per_day']:>11.1f}"
+                  f"{r['dispatch_seconds_per_day']:>9.3f}{r['mean_ms_per_call']:>10.3f}"
+                  f"{r['max_ms_per_call']:>9.1f}")
+        print("Time inside dispatch() only; machine-dependent.")
+    print(f"Wrote {path}")
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--policies", nargs="+",
@@ -212,6 +353,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Always include baseline in the table when its results exist, for comparison.
     shown = policies if "baseline" in policies else ["baseline"] + policies
     print_summary(results, shown, days, args.per_day)
+    write_json_summary(results, shown, days)
     return 0
 
 

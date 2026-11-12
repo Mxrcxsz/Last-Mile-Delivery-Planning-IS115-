@@ -1,10 +1,10 @@
 """Shared helpers for the dispatch policies. Inputs are read-only and never modified."""
 
 import math
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
 
 from simulator.models import Parcel, SimulationContext
-from simulator.simulator import HUB, MINUTES_PER_KM
+from simulator.simulator import HUB, MINUTES_PER_KM, PLANNING_INTERVAL
 
 
 def waiting_parcels(parcel: Dict[str, Parcel]) -> List[str]:
@@ -67,7 +67,8 @@ def nearest_neighbor_order(
 
 
 # ---------------------------------------------------------------------------
-# Added for Policies B (grow_2opt) and C (grow_2opt_wait). Functions above are unchanged.
+# Trip building and timing, shared by Policies A to D. Policies never import each other;
+# anything two policies need lives here, and each policy passes in its own thresholds.
 # ---------------------------------------------------------------------------
 
 def departure_time(context: SimulationContext) -> float:
@@ -220,18 +221,7 @@ def grow_trip(
     route = [seed]
     load = parcel[seed]["size"]
     while buckets:
-        groups = group_by_stop(route, parcel)
-        stops = [parcel[g[0]]["delivery_location_id"] for g in groups]
-        arrivals = stop_arrivals(stops, distances, departure)
-        total = stops_distance(stops, distances)
-        # slack[i]: how many minutes stops i.. can be delayed before an on-time parcel turns late.
-        slack = [math.inf] * (len(stops) + 1)
-        for i in range(len(stops) - 1, -1, -1):
-            own = math.inf
-            for parcel_id in groups[i]:
-                if is_on_time(parcel[parcel_id], arrivals[i]):
-                    own = min(own, parcel[parcel_id]["delivery_window_end"] - arrivals[i])
-            slack[i] = min(own, slack[i + 1])
+        groups, stops, arrivals, total, slack = trip_timing(route, parcel, distances, departure)
 
         best = None  # (added km, window end, parcel ID, stop position, location)
         for location in list(buckets):
@@ -268,5 +258,152 @@ def grow_trip(
         # Insert after the last parcel of the stop before position (or at the front).
         index = sum(len(g) for g in groups[:position])
         route.insert(index, parcel_id)
+        load += parcel[parcel_id]["size"]
+    return route
+
+
+def trip_timing(
+    route: List[str], parcel: Dict[str, Parcel], distances: Dict[str, Dict[str, float]],
+    departure: float,
+) -> Tuple[List[List[str]], List[str], List[float], float, List[float]]:
+    """Return the route's stops, arrival times, km and slack. O(s + k).
+
+    groups and stops are the parcels and location of each stop, arrivals the arrival time
+    at each stop and total the km of the whole trip. slack[i] is how many minutes stops i
+    onward can be delayed before a parcel that is on time turns late (math.inf if none).
+    """
+
+    groups = group_by_stop(route, parcel)
+    stops = [parcel[g[0]]["delivery_location_id"] for g in groups]
+    arrivals = stop_arrivals(stops, distances, departure)
+    total = stops_distance(stops, distances)
+    slack = [math.inf] * (len(stops) + 1)
+    for i in range(len(stops) - 1, -1, -1):
+        own = math.inf
+        for parcel_id in groups[i]:
+            if is_on_time(parcel[parcel_id], arrivals[i]):
+                own = min(own, parcel[parcel_id]["delivery_window_end"] - arrivals[i])
+        slack[i] = min(own, slack[i + 1])
+    return groups, stops, arrivals, total, slack
+
+
+def on_time_candidates(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]:
+    """Return waiting parcels that can still be on time and fit a trip on their own. O(N)."""
+
+    distances = context["travel_distance"]
+    return [
+        parcel_id for parcel_id in waiting_parcels(parcel)
+        if can_still_be_on_time(parcel_id, parcel, context)
+        and within_limits(route_distance([parcel_id], parcel, distances), context)
+    ]
+
+
+def reachable_in_window(
+    parcel_id: str, parcel: Dict[str, Parcel], context: SimulationContext
+) -> bool:
+    """Return True if driving straight to the parcel arrives inside its window. O(1)."""
+
+    record = parcel[parcel_id]
+    direct = context["travel_distance"][HUB][record["delivery_location_id"]]
+    return is_on_time(record, departure_time(context) + direct * MINUTES_PER_KM)
+
+
+def overdue_parcels(
+    parcel: Dict[str, Parcel], context: SimulationContext, exclude: Set[str]
+) -> List[str]:
+    """Return waiting parcels, not in exclude, that can no longer be on time. O(N)."""
+
+    return [
+        parcel_id for parcel_id in waiting_parcels(parcel)
+        if parcel_id not in exclude and not can_still_be_on_time(parcel_id, parcel, context)
+    ]
+
+
+def should_wait(
+    route: List[str], parcel: Dict[str, Parcel], context: SimulationContext,
+    *, min_fill: float, wait_slack: float,
+) -> bool:
+    """Return True if the trip is nearly empty and waiting one round loses nothing. O(k).
+
+    Nearly empty means a load below min_fill of capacity. Waiting loses nothing if the same
+    trip one planning round later still meets the cutoff, and every parcel on it would still
+    arrive at least wait_slack minutes before its window end.
+    """
+
+    load = sum(parcel[p]["size"] for p in route)
+    if load >= min_fill * context["capacity"]:
+        return False
+    distances = context["travel_distance"]
+    later = context.copy()
+    later["current_time"] = context["current_time"] + PLANNING_INTERVAL
+    if not within_limits(route_distance(route, parcel, distances), later):
+        return False
+    groups = group_by_stop(route, parcel)
+    stops = [parcel[g[0]]["delivery_location_id"] for g in groups]
+    arrivals = stop_arrivals(stops, distances, departure_time(context))
+    for group, arrival in zip(groups, arrivals):
+        for parcel_id in group:
+            if parcel[parcel_id]["delivery_window_end"] - arrival < wait_slack:
+                return False
+    return True
+
+
+def fill_overdue(
+    route: List[str], overdue: List[str], parcel: Dict[str, Parcel], context: SimulationContext
+) -> List[str]:
+    """Add overdue parcels by cheapest insertion without delaying any on-time parcel.
+
+    An overdue parcel can only be late, so it earns nothing on the on-time rate; it is
+    added only where the detour keeps capacity, range and the cutoff, and pushes no on-time
+    parcel on the trip past its window end. Ties: least added km, earliest window end,
+    parcel ID, earliest position.
+
+    Complexity, for m overdue parcels at L' locations, s stops and k parcels in the trip:
+    bucketing O(m log m); each of up to k added parcels prices L' locations at s + 1
+    positions after an O(s + k) timing pass, so O(m log m + k (L' s + s + k)). Space O(m + k).
+    """
+
+    distances = context["travel_distance"]
+    departure = departure_time(context)
+    capacity = context["capacity"]
+
+    # All parcels at one location cost the same to insert, so price each location once.
+    buckets: Dict[str, List[str]] = {}
+    for parcel_id in sorted(overdue, key=lambda p: (parcel[p]["delivery_window_end"], p)):
+        buckets.setdefault(parcel[parcel_id]["delivery_location_id"], []).append(parcel_id)
+
+    route = list(route)
+    load = sum(parcel[p]["size"] for p in route)
+    while buckets:
+        groups, stops, _, total, slack = trip_timing(route, parcel, distances, departure)
+        best = None  # (added km, window end, parcel ID, stop position)
+        for location, bucket in buckets.items():
+            # Most overdue parcel at this location that still fits the load.
+            fitting = next(
+                (p for p in bucket if load + parcel[p]["size"] <= capacity + 1e-9), None
+            )
+            if fitting is None:
+                continue
+            for position in range(len(stops) + 1):
+                before = HUB if position == 0 else stops[position - 1]
+                after = HUB if position == len(stops) else stops[position]
+                added = (distances[before][location] + distances[location][after]
+                         - distances[before][after])
+                # The detour delays every later stop by added km of driving.
+                if (added * MINUTES_PER_KM > slack[position] + 1e-9
+                        or not within_limits(total + added, context)):
+                    continue
+                key = (added, parcel[fitting]["delivery_window_end"], fitting, position)
+                if best is None or key < best:
+                    best = key
+        if best is None:
+            break
+        _, _, parcel_id, position = best
+        location = parcel[parcel_id]["delivery_location_id"]
+        buckets[location].remove(parcel_id)
+        if not buckets[location]:
+            del buckets[location]
+        # Insert after the last parcel of the stop before position (or at the front).
+        route.insert(sum(len(g) for g in groups[:position]), parcel_id)
         load += parcel[parcel_id]["size"]
     return route

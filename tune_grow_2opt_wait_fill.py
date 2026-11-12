@@ -1,9 +1,9 @@
-"""Grid-search Policy C's two thresholds, choosing on tuning days and checking on test days.
+"""Grid-search Policy B's two thresholds, choosing on tuning days and checking on test days.
 
-Policy C (solution/policies/grow_2opt_wait.py) has two settings:
+Policy B (solution/policies/grow_2opt_wait_fill.py) has two settings:
     MIN_FILL    a trip loaded below this share of capacity counts as nearly empty
     WAIT_SLACK  minutes every parcel on the trip must be able to wait before C holds it back
-MIN_FILL = 0 switches the waiting rule off, so that row isolates the "no early delivery" rule.
+MIN_FILL = 0 switches the waiting rule off, so those rows measure Policy B without waiting.
 
 Each setting is run on every day. The best setting is chosen by its mean on_time_rate on
 the tuning days only (default day_001 to day_010); its score on the test days (default
@@ -11,9 +11,9 @@ day_011 to day_020) shows whether the gain carries over to days it was not chose
 
 Run from the project root (standard library only, about 1 to 3 minutes):
 
-    python3 tune_grow_2opt_wait.py
+    python3 tune_grow_2opt_wait_fill.py
 
-Prints a table and writes results/tuning_grow_2opt_wait.csv. Logs go to a temporary folder,
+Prints a table and writes results/tuning_grow_2opt_wait_fill.csv. Logs go to a temporary folder,
 so results/<policy>/ is not touched.
 """
 
@@ -33,19 +33,19 @@ SLACKS = (10.0, 20.0, 40.0)
 
 
 def run_one(task: Tuple[float, float, str, str]) -> Tuple[float, float, str, float]:
-    """Run Policy C with the given thresholds on one day; return its on_time_rate."""
+    """Run Policy B with the given thresholds on one day; return its on_time_rate."""
 
     fill, slack, day, data = task
     sys.path.insert(0, str(ROOT))
-    import solution.policies.grow_2opt_wait as policy_c
+    import solution.policies.grow_2opt_wait_fill as policy_b
     from simulator.loaders import day_input_paths
     from simulator.simulator import Simulator
     from solution.performance_monitor import calculate_metrics
 
-    policy_c.MIN_FILL, policy_c.WAIT_SLACK = fill, slack
+    policy_b.MIN_FILL, policy_b.WAIT_SLACK = fill, slack
     parcels_path, distances_path, config_path = day_input_paths(Path(data), day)
     simulator = Simulator(parcels_path, distances_path, config_path,
-                          dispatch_policy=policy_c.dispatch)
+                          dispatch_policy=policy_b.dispatch)
     with tempfile.TemporaryDirectory() as folder:
         log = Path(folder) / "log.txt"
         simulator.run(log)
@@ -65,7 +65,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--data", default="data")
     parser.add_argument("--tune-days", default="1-10")
     parser.add_argument("--test-days", default="11-20")
-    parser.add_argument("--output", default="results/tuning_grow_2opt_wait.csv")
+    parser.add_argument("--output", default="results/tuning_grow_2opt_wait_fill.csv")
     args = parser.parse_args(argv)
 
     def days(spec: str) -> List[str]:
