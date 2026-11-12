@@ -1,18 +1,19 @@
-"""Policy A3: Policy A2's selection and routing with Policy C's timing rules.
+"""Policy A: Earliest Deadline First selection, nearest-neighbor routing, on-time-only trips.
 
 Selection rule: candidates are waiting parcels that can still be on time (overdue parcels
     are never sent). Try them by earliest delivery_window_end (parcel ID breaks ties). Keep
     a parcel only if capacity allows, and the nearest-neighbor tour that includes it meets
     range and the return cutoff and delivers every parcel on it inside its window: none
     early, none late.
-Routing rule: nearest neighbor from the hub, as in Policies A and A2.
-Timing rule: as Policy C. Return [] if no parcel fits (nothing can be reached inside its
-    window yet), or if the trip is nearly empty and every parcel on it can wait one more
-    round (Policy C's waiting rule, same thresholds).
+Routing rule: nearest neighbor from the hub: always drive to the closest remaining stop.
+Timing rule: return [] if no parcel fits (nothing can be reached inside its window yet),
+    or if the trip is nearly empty (load below MIN_FILL of capacity) and every parcel on
+    it can still be on time one round later (slack of at least WAIT_SLACK minutes). The
+    thresholds are Policy B's tuned values, not tuned separately for this policy.
 
-Policy A2 and this policy differ only in timing, and this policy and Policy C differ only
-    in selection and routing. Comparing the three splits C's gain over A2 into the part
-    from timing rules and the part from clustered, deadline-checked trip building.
+Policy A and Policy B share the same timing rules and differ in selection and routing, so
+    comparing them measures deadline-order selection with nearest-neighbor routing against
+    cheapest-insertion trips with 2-opt.
 
 Algorithms and data structures: sorting (deadline order); greedy selection; nearest-neighbor
     routing.
@@ -26,11 +27,13 @@ Complexity per dispatch call, for N arrived parcels, n candidates and k parcels 
 from typing import Dict, List
 
 from simulator.models import Parcel, SimulationContext
-from solution.policies.grow_2opt_wait import _should_wait
 from solution.policies.helpers import (
     HUB, MINUTES_PER_KM, can_still_be_on_time, departure_time, is_on_time,
-    nearest_neighbor_order, route_distance, waiting_parcels, within_limits,
+    nearest_neighbor_order, route_distance, should_wait, waiting_parcels, within_limits,
 )
+
+MIN_FILL = 0.75     # A trip below this share of capacity counts as nearly empty.
+WAIT_SLACK = 10.0   # Minutes every parcel must be able to wait: one planning interval.
 
 
 def dispatch(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]:
@@ -56,7 +59,7 @@ def dispatch(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]
             route = trial
             load += parcel[parcel_id]["size"]
 
-    if route and _should_wait(route, parcel, context):
+    if route and should_wait(route, parcel, context, min_fill=MIN_FILL, wait_slack=WAIT_SLACK):
         return []
     return route
 

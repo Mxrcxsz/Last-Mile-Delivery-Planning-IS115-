@@ -4,71 +4,51 @@ A logistics company delivers parcels from 1 hub using 10 vehicles, each with cap
 
 Team members: Marcus Yeong, [teammate name(s)]
 
-Deadline: Friday 13 Nov 2026, 23:59 (submit one ZIP to eLearn: `solution/`, `results/`, `README.md` and the report).
+Deadline: Friday 13 Nov 2026, 23:59 (submit one ZIP to eLearn: `solution/`, `results/`, `README.md`, `run_experiments.py`, `tune_grow_2opt_wait_fill.py` and the report).
 
 ## Team status and plan
 
 > This section is for the team. Delete it, or reduce it to a short "Policies implemented" list, before submission.
 
-### Where we are (updated 7 Nov 2026)
+### Where we are (updated 12 Nov 2026)
 
 | Item | Status | Owner | Notes |
 | --- | --- | --- | --- |
-| Metric: on-time rate (`solution/performance_monitor.py`) | Done, on `main` | Marcus | Definition in "The metric" below. |
-| Baseline run on day_001 to day_020 | Done | Marcus | Average on-time rate 0.2741. |
-| README skeleton | Done, on `main` | Marcus | This file. |
-| Policy A: `edf_nn.py` and `helpers.py` | Done, on `main` | Marcus | Average on-time rate 0.4141. |
-| Merge `marcus` into `main` | Done | Marcus | Do this first so everyone builds on `helpers.py`. |
-| Policy A2: `edf_nn_skip_overdue.py` | Done, on `main` | Marcus | Average on-time rate 0.5587. |
-| Policy A3: `edf_nn_wait.py` | Done, on branch `marcus` | Marcus | A2 with C's timing rules. Average on-time rate 0.7591, above A2 on all 20 days. |
-| `run_experiments.py` (run policies on all 20 days, print a comparison table) | Done, on branch `varshni` | Varshni | `python3 run_experiments.py --policies grow_2opt`. Also writes `results/summary.csv`. |
-| Policy B: `grow_2opt.py` | Done, on branch `varshni` | Varshni | Average on-time rate 0.6117. Adds functions to the end of `helpers.py`; existing helpers unchanged. |
-| Policy C: `grow_2opt_wait.py` | Done, on branch `varshni` | Varshni | Average on-time rate 0.9408. Thresholds tuned on days 1 to 10, checked on 11 to 20 with `tune_grow_2opt_wait.py`. |
-| Policy C2: `grow_2opt_wait_fill.py` | Done, on branch `marcus` | Marcus | C plus overdue parcels in spare space. Same on-time rate as C on every day (0.9408); delivery rate 0.9408 → 0.9546. |
-| Policy D: `ucs_routing.py` | Done, on branch `marcus` | Marcus | C with exact (UCS) routing for trips of at most 8 stops. Average on-time rate 0.9419; shorter than 2-opt on only 3% of searched trips. |
-| Policy E: `least_slack.py` | Done, on branch `marcus` | Marcus | C's timing with least-slack-first selection from a min-heap. Average on-time rate 0.8961. |
-| Control: `random_feasible.py` (optional) | Idea | [name] | A "does our idea beat luck" comparison. |
-| Full 20-day runs for every policy, committed under `results/` | To do | Everyone | Required deliverable. |
-| Report (at most 8 pages) | To do | Everyone | Split described below. |
-| Final README (policy rows, results, no status section) | To do | Marcus | |
+| Metric: on-time rate (`solution/performance_monitor.py`) | Done | Marcus | Definition in "The metric" below, plus fleet-usage metrics. |
+| `run_experiments.py` and `tune_grow_2opt_wait_fill.py` | Done | Varshni | Run every policy on 20 days; tune Policy B's thresholds. |
+| Policy A: `edf_nn_wait.py` | Done | Marcus | Average on-time rate 0.7591. |
+| Policy B: `grow_2opt_wait_fill.py` | Done | Varshni, Marcus | Average on-time rate 0.9408, delivery rate 0.9546. Merges the earlier B, C and C2. |
+| Policy C: `least_slack.py` | Done | Marcus | Average on-time rate 0.8956. |
+| Policy D: `ucs_routing.py` | Done | Marcus | Average on-time rate 0.9419 (not significantly above B). |
+| Full 20-day runs for every policy under `results/` | Done | Marcus | `results/` is git-ignored: add it to the ZIP by hand. |
+| Report (at most 8 pages) | In progress | Everyone | Source material: `report_findings.md`. |
+| Final README (no status section) | To do | Marcus | |
 
-### Findings so far
-
-These come from Marcus's runs. Regenerate all numbers with the commands in "Reproduce the results" before they go into the report.
-
-- The baseline keeps arrival order as the route order, so its routes zigzag. On day_001 it averages 17.4 parcels per trip. Policy A averages 28.2, because nearest-neighbor ordering makes each tour shorter, so more parcels fit under the 320 km range.
-- Policy A already helps a lot (on-time rate 0.2741 to 0.4141, delivery rate 0.4045 to 0.7885).
-- Policy A still serves parcels that are already past their window before it serves others. Moving them to the back of the queue (the A2 prototype) lifted the on-time rate to 0.5587 and almost halved the late parcels per day.
-- Policy A delivers about 14.8 parcels per day before their window opens, and the A2 prototype about 33.1. These do not count as on time, which is the reason for the waiting rule in Policy C.
+Earlier policies (Policy A without waiting, A with overdue parcels last, Policy B without waiting or filling, and B without filling) were merged into the four policies above on 12 Nov. They are in git history at commit `92948fd` and summarised in `report_findings.md`.
 
 ### Policy plan
 
-Each policy is a standalone file. All of them are built from three choices: timing (leave now or wait), selection (which parcels) and routing (the order of stops). Each file changes one idea from the one before it, so we can say which idea earned which gain. File names are provisional.
+All policies are built from four choices: timing (leave now or wait), selection (which parcels), routing (the order of stops) and filling (whether late parcels ride along). Policies B, C and D share timing and filling and differ in one choice each, so each comparison isolates one idea.
 
-| Policy | Timing | Selection | Routing | Idea it adds |
-| --- | --- | --- | --- | --- |
-| baseline | Leave now | Arrival order | Selection order | Supplied. |
-| A `edf_nn` | Leave now | Earliest window end first | Nearest-neighbor | Deadline order and a shorter tour. |
-| A2 `edf_nn_skip_overdue` | Leave now | Earliest window end first, parcels that can no longer be on time go last | Nearest-neighbor | Do not spend trips on lost causes. |
-| A3 `edf_nn_wait` | Wait as in C; nothing early or late | Same as A2, overdue parcels never sent; keep a parcel only if every parcel on the nearest-neighbor tour arrives inside its window | Nearest-neighbor | How much of C's gain is timing alone? |
-| B `grow_2opt` | Leave now | Seed with the most urgent parcel that can still be on time, then add the feasible parcel that adds the least distance | Nearest insertion, then 2-opt on the distance table | Choose nearby parcels on purpose and improve the order. |
-| C `grow_2opt_wait` | Wait if the trip is nearly empty and the most urgent parcel still has slack, or if the parcels would arrive before their window opens | Same as B | Same as B | Do not send trips too early or too empty. |
-| C2 `grow_2opt_wait_fill` | Same as C | Same as C, then fill spare capacity with overdue parcels whose insertion delays no on-time parcel | Same as C, plus cheapest insertion of the overdue parcels | Deliver lost causes late when it costs nothing. |
-| D `ucs_routing` | Same as C | Same as C | Exact: uniform-cost search over (location, visited stops) with a min-heap, for trips of at most 8 stops; C's 2-opt route otherwise | How much does optimal routing buy over 2-opt? |
-| E `least_slack` | Same as C | Least slack first: candidates popped from a min-heap by slack, each inserted at its cheapest feasible position | Same as C | Urgency-first instead of distance-first selection. |
+| Policy | Timing | Selection | Routing | Filling | What the comparison shows |
+| --- | --- | --- | --- | --- | --- |
+| baseline | Leave now | Arrival order | Selection order | None | Supplied reference. |
+| A `edf_nn_wait` | Wait if nothing fits or the trip is nearly empty | Earliest window end first, only parcels that arrive inside their window | Nearest neighbor | None | Deadline order with timing rules. |
+| B `grow_2opt_wait_fill` | As A | Seed with the most urgent parcel, then add the parcel that adds the least distance, never early or late | Cheapest insertion, then 2-opt | Overdue parcels where they delay no one | Recommended policy. |
+| C `least_slack` | As B | Least slack first, popped from a min-heap | As B | As B | Urgency-first vs B's distance-first selection. |
+| D `ucs_routing` | As B | As B | Exact uniform-cost search for at most 8 stops, otherwise as B | As B | Optimal routing vs B's 2-opt. |
 
 Design points to remember:
 
 - There are no coordinates, only the directed distance matrix. 2-opt must compare distances and recompute the reversed segment, not test whether edges cross.
 - Policies must not read `data/` and must treat `parcel` and `context` as read-only.
-- UCS needs a cap on the number of distinct stops (about 8 to 10), because the number of states grows as 2^k.
+- Exact routing needs a cap on the number of distinct stops (8), because the number of stop orders grows as s!.
 - Delivery before `window_start` does not count as on time, so early deliveries are wasted.
 
 ### Open decisions
 
-- The brief says "several" policies and gives no minimum. We are aiming for at least three. Ask the teaching team if a minimum exists.
-- ~~Thresholds for the waiting rule in Policy C~~ Settled: MIN_FILL 0.75, WAIT_SLACK 10 minutes, chosen on days 1 to 10 only (tuning 0.9392, unseen days 11 to 20: 0.9424).
-- Whether D is worth the time. Decide after B and C are done.
+- ~~Thresholds for the waiting rule~~ Settled: MIN_FILL 0.75, WAIT_SLACK 10 minutes, chosen on days 1 to 10 only (tuning 0.9392, unseen days 11 to 20: 0.9424).
+- Recommended policy: B, unless the team prefers D (see `report_findings.md`).
 
 ### Schedule (proposal)
 
@@ -85,6 +65,7 @@ Design points to remember:
 
 - One branch per person, for example `marcus`. Merge into `main` by pull request, and the other person reads it first.
 - One owner per policy file. Changes to `helpers.py` or `performance_monitor.py` go through the owner, and the others are told before they are merged.
+- A policy file never imports another policy file. Code that two or more policies use lives in `helpers.py`; each policy keeps its own thresholds as module constants and passes them to the helpers (for example `should_wait(..., min_fill=MIN_FILL, wait_slack=WAIT_SLACK)`).
 - Never change `simulator/`, `data/`, `baseline.py` or any `__init__.py`.
 - Run a policy on all 20 days before merging it, and commit its `results/<policy>/` folder.
 - Each policy file starts with a docstring giving its selection rule, routing rule, timing rule and worst-case time and space complexity. The report's complexity section is written from these.
@@ -109,7 +90,7 @@ Tested with Python 3.13.7 and Python 3.9.6 on macOS. The commands in section "Re
 ├── IS115_Project_Brief.pdf       Project brief
 ├── .gitignore                    Files excluded from git
 ├── run_experiments.py            Runs policies on many days, scores them and prints a comparison table
-├── tune_grow_2opt_wait.py        Grid search for Policy C's two thresholds (tuning vs test days)
+├── tune_grow_2opt_wait_fill.py   Grid search for Policy B's two thresholds (tuning vs test days)
 ├── simulator/                    Supplied and unchanged: simulation framework
 │   ├── __init__.py               Package marker
 │   ├── __main__.py               Entry point for python3 -m simulator
@@ -126,16 +107,11 @@ Tested with Python 3.13.7 and Python 3.9.6 on macOS. The commands in section "Re
 │   └── policies/                 Dispatch policies
 │       ├── __init__.py           Package marker
 │       ├── baseline.py           Supplied and unchanged: greedy first-fit in arrival order
-│       ├── helpers.py            Shared helpers
-│       ├── edf_nn.py             Policy A: earliest deadline first, nearest-neighbor
-│       ├── edf_nn_skip_overdue.py Policy A2: as A, overdue parcels last
-│       ├── edf_nn_wait.py        Policy A3: A2 with Policy C's timing rules
-│       ├── grow_2opt.py          Policy B: urgent seed, cheapest insertion, 2-opt
-│       ├── grow_2opt_wait.py     Policy C: Policy B with no early deliveries and no nearly empty trips
-│       ├── grow_2opt_wait_fill.py Policy C2: Policy C plus overdue parcels in spare space
-│       ├── ucs_routing.py        Policy D: Policy C with exact uniform-cost-search routing
-│       ├── least_slack.py        Policy E: least slack first from a min-heap, with C's timing
-│       └── ...                   Planned policies, see "Policy plan"
+│       ├── helpers.py            Shared helpers (trip building, timing, waiting, filling)
+│       ├── edf_nn_wait.py        Policy A: earliest deadline first, nearest neighbor, on-time-only trips
+│       ├── grow_2opt_wait_fill.py Policy B: cheapest insertion, 2-opt, waiting, overdue filling
+│       ├── least_slack.py        Policy C: least slack first from a min-heap, B's timing and filling
+│       └── ucs_routing.py        Policy D: Policy B with exact uniform-cost-search routing
 └── results/                      Generated by the commands below
     └── <policy>/day_XXX/         log.txt and metrics.json for one policy and day
 ```
@@ -178,20 +154,16 @@ Both window boundaries count as on time. A delivery before `window_start` is ear
 | File | Selection rule | Routing rule | Timing rule | Worst-case time per `dispatch` call |
 | --- | --- | --- | --- | --- |
 | `solution/policies/baseline.py` | Try every waiting parcel in arrival order (parcel ID breaks ties). Skip a parcel that breaks capacity, range or the return cutoff, and keep trying later ones. Delivery windows are ignored. | Visit stops in selection order. | No waiting: leave whenever at least one parcel fits. | O(n log n), for n arrived parcels |
-| `solution/policies/grow_2opt.py` (Policy B) | Only parcels that can still be on time (direct drive reaches them by window end). Seed with the most urgent, then repeatedly add the parcel whose cheapest insertion adds the least distance (ties: earliest window end). An insertion must keep capacity, range and cutoff, arrive by the new parcel's window end, and push no on-time parcel past its window end. Early arrival allowed. | Insertion order, then 2-opt over distinct stops on the directed table; a move is kept only if strictly shorter and the on-time count does not fall. | No waiting. | O(N + n log n + k(Lk + n) + P s²(s + k)), for N arrived, n candidate parcels, L locations, k parcels and s stops in the trip, P 2-opt passes |
-| `solution/policies/grow_2opt_wait.py` (Policy C) | As B, but a parcel is added only if it arrives inside its window (never early); the seed must also be reachable inside its window. | As B. | Return `[]` if no parcel can be reached inside its window yet, or if the load is below 75% of capacity and every parcel can wait 10 more minutes. | As B, plus O(k) for the waiting test |
-| `solution/policies/grow_2opt_wait_fill.py` (Policy C2) | Policy C's trip, then repeatedly add the overdue parcel (one that can only be late) whose cheapest insertion adds the fewest km, as long as capacity, range and the cutoff hold and no on-time parcel on the trip is pushed past its window end. Parcels that can still be on time but are not on C's trip are never added. | C's order, with each overdue parcel at its cheapest allowed position. | As C: overdue parcels never cause a departure or a wait. | As C, plus O(m log m + k(L′s + s + k)) for m overdue parcels at L′ locations |
-| `solution/policies/ucs_routing.py` (Policy D) | As C. | Parcels grouped into one stop per location, each with an arrival interval [latest window start, earliest window end]. For at most 8 stops, uniform-cost search over (location, visited set), cost = km = minutes, expanding cheapest first from a min-heap; a move is allowed only if it arrives inside the stop's interval; C's 2-opt route is the upper bound for pruning. The first complete tour popped is the shortest feasible one; used only if strictly shorter than C's. | As C. | As C, plus O(s! s log(s! s)) for s ≤ 8 stops (a constant under the cap) |
-| `solution/policies/least_slack.py` (Policy E) | Candidates as C. Slack = window end − (departure + direct drive). Seed: least-slack parcel reachable inside its window. Other candidates go into a min-heap by (slack, window end, parcel ID); each popped parcel is inserted at its cheapest feasible position (inside its window, no on-time parcel pushed late, capacity, range and cutoff), or skipped. | Insertion order, then C's 2-opt. | As C. | O(N + n log n + n(s + k) + P s²(s + k)) |
-| `solution/policies/edf_nn.py` (Policy A) | Try waiting parcels by earliest `delivery_window_end` (parcel ID breaks ties). Skip a parcel that breaks capacity, and keep a parcel only if the nearest-neighbor tour that includes it meets the range and return cutoff. Parcels already past their window are still tried first. | Nearest neighbor from the hub. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k²), for n waiting parcels and k parcels in the trip |
-| `solution/policies/edf_nn_skip_overdue.py` (Policy A2) | Same as Policy A, except for the order parcels are tried in. A parcel is overdue if departure time + distance from the hub to its location > `delivery_window_end`. Parcels that can still be on time are tried first by earliest `delivery_window_end` (parcel ID breaks ties), then overdue parcels in the same order. | Nearest neighbor from the hub. | No waiting: leave whenever at least one parcel fits. | O(n log n + n k²), for n waiting parcels and k parcels in the trip |
-| `solution/policies/edf_nn_wait.py` (Policy A3) | Only parcels that can still be on time, by earliest `delivery_window_end` (parcel ID breaks ties). Keep a parcel only if capacity allows and the nearest-neighbor tour that includes it meets range and the cutoff and delivers every parcel on it inside its window (none early, none late). | Nearest neighbor from the hub. | As C: return `[]` if nothing fits, or if the trip is nearly empty and every parcel can wait one more round. | O(N + n log n + n k²) |
+| `solution/policies/edf_nn_wait.py` (Policy A) | Only parcels that can still be on time, by earliest `delivery_window_end` (parcel ID breaks ties). Keep a parcel only if capacity allows and the nearest-neighbor tour that includes it meets range and the cutoff and delivers every parcel on it inside its window (none early, none late). | Nearest neighbor from the hub. | Return `[]` if nothing fits, or if the load is below 75% of capacity and every parcel can wait 10 more minutes. | O(N + n log n + n k²) |
+| `solution/policies/grow_2opt_wait_fill.py` (Policy B) | Only parcels that can still be on time and fit alone. Seed: the most urgent one a direct drive reaches inside its window. Then repeatedly add the parcel whose cheapest insertion adds the least distance (ties: earliest window end, parcel ID), if it arrives inside its window, keeps capacity, range and cutoff, and pushes no on-time parcel past its window end. When the trip leaves, overdue parcels fill spare capacity where they delay no on-time parcel. | Insertion order, then 2-opt over distinct stops on the directed table; a move is kept only if strictly shorter and the on-time count does not fall. | Return `[]` if no parcel can be reached inside its window yet, or if the load is below 75% of capacity and every parcel can wait 10 more minutes. | O(N + n log n + k(Lk + n) + P s²(s + k) + m log m + k(L′s + s + k)) |
+| `solution/policies/least_slack.py` (Policy C) | Candidates as B. Slack = window end − (departure + direct drive). Seed: least-slack parcel reachable inside its window. Other candidates go into a min-heap by (slack, window end, parcel ID); each popped parcel is inserted at its cheapest feasible position (inside its window, no on-time parcel pushed late, capacity, range and cutoff), or skipped. Filling as B. | Insertion order, then B's 2-opt. | As B. | O(N + n log n + n(s + k) + P s²(s + k)) plus filling as B |
+| `solution/policies/ucs_routing.py` (Policy D) | As B. | B's 2-opt route, then, for at most 8 stops, uniform-cost search over (location, visited set) with cost = km = minutes, expanding cheapest first from a min-heap; a move is allowed only if it arrives inside the stop's interval [latest window start, earliest window end]; the 2-opt route is the upper bound for pruning. Used only if strictly shorter. | As B. | As B, plus O(s! s log(s! s)) for s ≤ 8 stops (a constant under the cap) |
+
+Notation: N arrived parcels, n candidates, L locations among them, k parcels and s distinct stops in the trip, P 2-opt passes, m overdue parcels at L′ locations.
 
 The docstring of each policy file states its rules and complexity. The routing rule, timing rule and complexity of `baseline.py` are read from its code.
 
-Add a row here for each new policy.
-
-Recommended policy: [name]
+Recommended policy: B (`grow_2opt_wait_fill`).
 
 ## Reproduce the results
 
@@ -217,21 +189,19 @@ python3 -m solution.performance_monitor \
 
 This prints `Metrics report: results/baseline/day_001/metrics.json`. That file contains `"on_time_rate": 0.2666`.
 
-### b. One non-baseline policy (Policy A)
-
-This needs the `marcus` branch, or `main` after it is merged.
+### b. One non-baseline policy (Policy B)
 
 ```sh
-python3 -m simulator --policy solution.policies.edf_nn \
+python3 -m simulator --policy solution.policies.grow_2opt_wait_fill \
     --data data --day day_001 \
-    --output results/edf_nn/day_001
+    --output results/grow_2opt_wait_fill/day_001
 
 python3 -m solution.performance_monitor \
     --data data --day day_001 \
-    --log results/edf_nn/day_001/log.txt
+    --log results/grow_2opt_wait_fill/day_001/log.txt
 ```
 
-The metrics are written to `results/edf_nn/day_001/metrics.json`.
+The metrics are written to `results/grow_2opt_wait_fill/day_001/metrics.json`. That file contains `"on_time_rate": 0.9186`.
 
 ### c. All policies on all 20 days
 
@@ -239,21 +209,21 @@ The quickest way, on any operating system, is the experiment runner. It does exa
 
 ```sh
 python3 run_experiments.py                                   # every policy in solution/policies/, all 20 days
-python3 run_experiments.py --policies grow_2opt grow_2opt_wait
-python3 run_experiments.py --policies grow_2opt --days 1-5   # day_001 to day_005
+python3 run_experiments.py --policies grow_2opt_wait_fill ucs_routing
+python3 run_experiments.py --policies edf_nn_wait --days 1-5 # day_001 to day_005
 python3 run_experiments.py --summary-only --per-day          # only re-print the table from existing results
 ```
 
-To reproduce Policy C's threshold choice (writes `results/tuning_grow_2opt_wait.csv`, does not touch `results/<policy>/`):
+To reproduce Policy B's threshold choice (writes `results/tuning_grow_2opt_wait_fill.csv`, does not touch `results/<policy>/`; about 2.5 minutes):
 
 ```sh
-python3 tune_grow_2opt_wait.py
+python3 tune_grow_2opt_wait_fill.py
 ```
 
 Equivalently, this loop needs bash or zsh (macOS or Linux). It runs the simulator and the performance monitor for each policy and day:
 
 ```sh
-for policy in baseline edf_nn edf_nn_skip_overdue grow_2opt grow_2opt_wait grow_2opt_wait_fill ucs_routing least_slack edf_nn_wait; do
+for policy in baseline edf_nn_wait grow_2opt_wait_fill least_slack ucs_routing; do
   for day in $(seq -f "day_%03g" 1 20); do
     python3 -m simulator --policy "solution.policies.$policy" \
         --data data --day "$day" \
@@ -265,7 +235,7 @@ for policy in baseline edf_nn edf_nn_skip_overdue grow_2opt grow_2opt_wait grow_
 done
 ```
 
-To include another policy, add its module name after `edf_nn_wait` in the first line.
+To include another policy, add its module name after `ucs_routing` in the first line.
 
 For each policy and day it prints 8 lines: parcels, vehicles, capacity, range, scheduled events, delivered, the log path and the metrics path. It writes the two files listed in part d, overwriting any earlier run in the same folder.
 
@@ -297,21 +267,13 @@ Unweighted mean of the daily `metrics.json` values over day_001 to day_020:
 
 | Policy | Average on_time_rate | Average delivery_rate | Average km_per_delivered_parcel |
 | --- | --- | --- | --- |
-| baseline | 0.2741 | 0.4045 | 16.3299 |
-| edf_nn (A) | 0.4141 | 0.7885 | 7.751 |
-| edf_nn_skip_overdue (A2) | 0.5587 | 0.7835 | 7.731 |
-| edf_nn_wait (A3) | 0.7591 | 0.7591 | 6.493 |
-| grow_2opt (B) | 0.6117 | 0.8653 | 5.757 |
-| grow_2opt_wait (C) | 0.9408 | 0.9408 | 4.431 |
-| grow_2opt_wait_fill (C2) | 0.9408 | 0.9546 | 4.393 |
-| ucs_routing (D) | 0.9419 | 0.9419 | 4.425 |
-| least_slack (E) | 0.8961 | 0.8961 | 5.682 |
+| baseline | 0.2741 | 0.4045 | 16.330 |
+| edf_nn_wait (A) | 0.7591 | 0.7591 | 6.493 |
+| grow_2opt_wait_fill (B) | 0.9408 | 0.9546 | 4.393 |
+| least_slack (C) | 0.8956 | 0.9384 | 5.440 |
+| ucs_routing (D) | 0.9419 | 0.9546 | 4.392 |
 
-All four rows were regenerated with `python3 run_experiments.py --policies baseline edf_nn grow_2opt grow_2opt_wait` on 9 Nov (the baseline and edf_nn rows match Marcus's runs exactly). Regenerate it with the commands in part c and replace it with the exact output. The A2 row comes from Marcus's 20-day run on 10 Nov, the A3, C2, D and E rows from his runs on 11 Nov.
-
-[Add a row for each policy added to `solution/policies/`.]
-
-The full run in part c took about 10 to 20 seconds for the baseline on the machine used for testing.
+Regenerated on 12 Nov with `python3 run_experiments.py`. Policies A and B produce byte-for-byte the same logs as before they were merged into single files.
 
 ## Notes
 
@@ -322,8 +284,8 @@ Runs are repeatable. Nothing uses randomness, so there is no seed. Ties are brok
 - Events: by time, then event type priority, then parcel or vehicle ID.
 - Vehicles in a planning round: longest idle first, then vehicle ID.
 - Baseline parcel order: arrival time, then parcel ID.
-- `edf_nn`, `edf_nn_skip_overdue` and `edf_nn_wait`: window end, then parcel ID.
-- `grow_2opt`, `grow_2opt_wait`, `grow_2opt_wait_fill` and `ucs_routing`: least added distance, then window end, then parcel ID.
+- `edf_nn_wait`: window end, then parcel ID.
+- `grow_2opt_wait_fill` and `ucs_routing`: least added distance, then window end, then parcel ID; overdue filling: least added distance, window end, parcel ID, earliest position.
 - `ucs_routing` search: equal-cost states are popped in the order they were pushed (a counter breaks heap ties).
 - `least_slack`: slack, then window end, then parcel ID; insertion position: least added distance, then earliest position.
 

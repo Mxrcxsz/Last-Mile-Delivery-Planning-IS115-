@@ -1,113 +1,65 @@
-"""Policy C2: Policy C, then fill the trip's spare capacity with overdue parcels.
+"""Policy B: cheapest-insertion trips, 2-opt, no early deliveries, waiting, overdue filling.
 
-Selection rule: first build exactly Policy C's trip (or wait, if C waits). Then repeatedly
-    add the overdue parcel (one that can no longer be on time, so any delivery is late)
-    whose cheapest insertion adds the fewest km (ties: earliest window end, then parcel
-    ID). An insertion is allowed only if capacity, range and the 18:00 cutoff still hold,
-    and the extra driving does not push any on-time parcel on the trip past its window end.
-    Parcels that can still be on time but are not on C's trip are never added here; they
-    stay at the hub for a later trip, where they can count as on time.
-Routing rule: C's order, with each overdue parcel inserted at its cheapest allowed position.
-    Inserting at an existing stop for the same location adds 0 km and delays nobody.
-Timing rule: as Policy C. Overdue parcels only ride on trips C sends anyway: they never
-    make a vehicle leave, wait or take an extra trip.
+Selection rule: candidates are waiting parcels that can still be on time (a direct drive
+    reaches them by their window end) and fit a trip on their own. Seed the trip with the
+    most urgent candidate that a direct drive reaches inside its window (earliest window
+    end, parcel ID breaks ties). Then grow it by cheapest insertion: repeatedly add the
+    candidate whose best insertion position adds the least distance (ties: earliest window
+    end, then parcel ID). A parcel can be added only if capacity, range and the 18:00
+    cutoff hold, it arrives inside its window (never early, never late), and no parcel
+    already on the trip is pushed past its window end.
+Routing rule: insertion order, then 2-opt over the distinct stops; a move is kept only if
+    the trip gets strictly shorter and the number of on-time parcels does not fall.
+Timing rule: return [] (wait for the next round, 10 minutes later) if no candidate can be
+    reached inside its window yet, or if the trip is nearly empty (load below MIN_FILL of
+    capacity) and every parcel on it can still be on time one round later (slack of at
+    least WAIT_SLACK minutes).
+Filling rule: when the trip leaves, its spare capacity is filled with overdue parcels (ones
+    that can only be late) by cheapest insertion, but only where the detour pushes no
+    on-time parcel past its window end. They never cause a departure, a wait or a trip.
 
-Because no on-time parcel is delayed, C2 delivers every parcel on time that C's trip
-    would, so the change can only add (late) deliveries to the same trip. Over a whole day
-    trips can still drift apart from C's, since longer trips return later.
+MIN_FILL and WAIT_SLACK were chosen by grid search on day_001 to day_010 only, then checked
+    on day_011 to day_020: python3 tune_grow_2opt_wait_fill.py.
 
-Algorithms and data structures: as Policy C, plus a second cheapest-insertion pass using a
-    hash map from location to a deadline-sorted list of overdue parcels.
+Algorithms and data structures: greedy cheapest insertion; 2-opt local search; hash maps
+    from location to a deadline-sorted list of parcels (all parcels at one location cost
+    the same to insert, so each location is priced once per position).
 
-Complexity per dispatch call: Policy C's cost, plus the filling pass. For m overdue
-    parcels at L' distinct locations, s stops and k parcels in the trip: bucketing costs
-    O(m log m); each of up to k added parcels prices L' locations at s + 1 positions
-    after an O(s + k) pass for arrivals and slack, so O(m log m + k (L' s + s + k)).
-    Space O(m + k).
+Complexity per dispatch call, for N arrived parcels, n candidates at L distinct locations,
+    k parcels and s distinct stops in the trip, P 2-opt passes, m overdue parcels at L'
+    locations:
+    Filtering O(N); bucketing O(n log n); growth O(k (L k + n)); 2-opt O(s^2 (s + k)) per
+    pass; waiting test O(k); filling O(m log m + k (L' s + s + k)).
+    Time: O(N + n log n + k (L k + n) + P s^2 (s + k) + m log m + k (L' s + s + k)).
+    In practice L <= 36 and k is about 30, so this is close to linear in N.
+    Space: O(N + k).
+    A waiting vehicle is asked again every round, so waiting raises the number of calls per
+    day, to at most 58 rounds x 10 vehicles = 580.
 """
 
-import math
 from typing import Dict, List
 
 from simulator.models import Parcel, SimulationContext
-from solution.policies import grow_2opt_wait
 from solution.policies.helpers import (
-    HUB, can_still_be_on_time, departure_time, group_by_stop, is_on_time, stop_arrivals,
-    stops_distance, waiting_parcels, within_limits,
+    departure_time, fill_overdue, grow_trip, on_time_candidates, overdue_parcels,
+    reachable_in_window, should_wait, two_opt,
 )
+
+MIN_FILL = 0.75     # A trip below this share of capacity counts as nearly empty.
+WAIT_SLACK = 10.0   # Minutes every parcel must be able to wait: one planning interval.
 
 
 def dispatch(parcel: Dict[str, Parcel], context: SimulationContext) -> List[str]:
-    """Return Policy C's trip with overdue parcels added where they delay no on-time parcel."""
+    """Return one trip whose on-time parcels all arrive inside their windows, or [] to wait."""
 
-    route = grow_2opt_wait.dispatch(parcel, context)
-    if not route:
-        return route
-    on_trip = set(route)
-    overdue = [
-        parcel_id for parcel_id in waiting_parcels(parcel)
-        if parcel_id not in on_trip and not can_still_be_on_time(parcel_id, parcel, context)
-    ]
-    return fill_overdue(route, overdue, parcel, context)
+    candidates = on_time_candidates(parcel, context)
+    seeds = [p for p in candidates if reachable_in_window(p, parcel, context)]
+    if not seeds:
+        return []
+    seed = min(seeds, key=lambda p: (parcel[p]["delivery_window_end"], p))
+    route = grow_trip(seed, candidates, parcel, context, allow_early=False)
+    route = two_opt(route, parcel, context["travel_distance"], departure_time(context))
 
-
-def fill_overdue(
-    route: List[str], overdue: List[str], parcel: Dict[str, Parcel], context: SimulationContext
-) -> List[str]:
-    """Insert overdue parcels by cheapest insertion without delaying any on-time parcel."""
-
-    distances = context["travel_distance"]
-    departure = departure_time(context)
-    capacity = context["capacity"]
-
-    # All parcels at one location cost the same to insert, so price each location once.
-    buckets: Dict[str, List[str]] = {}
-    for parcel_id in sorted(overdue, key=lambda p: (parcel[p]["delivery_window_end"], p)):
-        buckets.setdefault(parcel[parcel_id]["delivery_location_id"], []).append(parcel_id)
-
-    route = list(route)
-    load = sum(parcel[p]["size"] for p in route)
-    while buckets:
-        groups = group_by_stop(route, parcel)
-        stops = [parcel[g[0]]["delivery_location_id"] for g in groups]
-        arrivals = stop_arrivals(stops, distances, departure)
-        total = stops_distance(stops, distances)
-        # slack[i]: minutes stops i.. can be delayed before an on-time parcel turns late.
-        slack = [math.inf] * (len(stops) + 1)
-        for i in range(len(stops) - 1, -1, -1):
-            own = math.inf
-            for parcel_id in groups[i]:
-                if is_on_time(parcel[parcel_id], arrivals[i]):
-                    own = min(own, parcel[parcel_id]["delivery_window_end"] - arrivals[i])
-            slack[i] = min(own, slack[i + 1])
-
-        best = None  # (added km, window end, parcel ID, stop position)
-        for location, bucket in buckets.items():
-            # Most overdue parcel at this location that still fits the load.
-            fitting = next(
-                (p for p in bucket if load + parcel[p]["size"] <= capacity + 1e-9), None
-            )
-            if fitting is None:
-                continue
-            for position in range(len(stops) + 1):
-                before = HUB if position == 0 else stops[position - 1]
-                after = HUB if position == len(stops) else stops[position]
-                added = (distances[before][location] + distances[location][after]
-                         - distances[before][after])
-                # The detour delays every later stop by `added` minutes (km == minutes).
-                if added > slack[position] + 1e-9 or not within_limits(total + added, context):
-                    continue
-                key = (added, parcel[fitting]["delivery_window_end"], fitting, position)
-                if best is None or key < best:
-                    best = key
-        if best is None:
-            break
-        _, _, parcel_id, position = best
-        bucket = buckets[parcel[parcel_id]["delivery_location_id"]]
-        bucket.remove(parcel_id)
-        if not bucket:
-            del buckets[parcel[parcel_id]["delivery_location_id"]]
-        # Insert after the last parcel of the stop before position (or at the front).
-        route.insert(sum(len(g) for g in groups[:position]), parcel_id)
-        load += parcel[parcel_id]["size"]
-    return route
+    if should_wait(route, parcel, context, min_fill=MIN_FILL, wait_slack=WAIT_SLACK):
+        return []
+    return fill_overdue(route, overdue_parcels(parcel, context, set(route)), parcel, context)

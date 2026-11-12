@@ -8,8 +8,8 @@ the mean of every metric per policy and writes results/summary.csv.
 Examples, from the project root:
 
     python3 run_experiments.py                                  # every policy, all 20 days
-    python3 run_experiments.py --policies baseline grow_2opt    # selected policies
-    python3 run_experiments.py --policies grow_2opt --days 1-5  # day_001 to day_005
+    python3 run_experiments.py --policies baseline grow_2opt_wait_fill  # selected policies
+    python3 run_experiments.py --policies edf_nn_wait --days 1-5      # day_001 to day_005
     python3 run_experiments.py --summary-only                   # re-print the table from existing results
     python3 run_experiments.py --per-day                        # also print one row per day
 
