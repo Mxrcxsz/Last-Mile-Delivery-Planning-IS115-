@@ -28,10 +28,12 @@ Algorithms and data structures: greedy cheapest insertion; 2-opt local search; h
 Complexity per dispatch call, for N arrived parcels, n candidates at L distinct locations,
     k parcels and s distinct stops in the trip, P 2-opt passes, m overdue parcels at L'
     locations:
-    Filtering O(N); bucketing O(n log n); growth O(k (L k + n)); 2-opt O(s^2 (s + k)) per
-    pass; waiting test O(k); filling O(m log m + k (L' s + s + k)).
-    Time: O(N + n log n + k (L k + n) + P s^2 (s + k) + m log m + k (L' s + s + k)).
-    In practice L <= 36 and k is about 30, so this is close to linear in N.
+    Filtering O(N); bucketing O(n log n); growth O(k s n) in the worst case (see
+    helpers.grow_trip); 2-opt O(s^2 (s + k)) per pass; waiting test O(k); filling
+    O(m log m + k (m + L' s + s + k)).
+    Time: O(N + n log n + k s n + P s^2 (s + k) + m log m + k (m + L' s + s + k)).
+    Worst case O(n^3) if k and s grow with n. In practice k is about 30, s is at most 36
+    and a bucket's first parcel usually fits, so this is close to linear in N.
     Space: O(N + k).
     A waiting vehicle is asked again every round, so waiting raises the number of calls per
     day, to at most 58 rounds x 10 vehicles = 580.

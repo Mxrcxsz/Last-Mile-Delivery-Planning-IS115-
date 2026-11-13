@@ -31,7 +31,7 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from statistics import mean, pstdev, stdev
+from statistics import mean, stdev
 from typing import Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parent
@@ -142,7 +142,8 @@ def print_summary(results: Path, policies: List[str], days: List[str], per_day: 
         row = {"policy": policy, "days": len(metrics)}
         for key in TABLE_KEYS:
             row[key] = mean(m[key] for m in metrics.values())
-        row["on_time_rate_sd"] = pstdev(rates)
+        # Sample standard deviation (n - 1), the same convention as summary.json.
+        row["on_time_rate_sd"] = stdev(rates) if len(rates) > 1 else 0.0
         shared = [day for day in metrics if day in baseline]
         if policy != "baseline" and shared:
             row["days_beating_baseline"] = sum(

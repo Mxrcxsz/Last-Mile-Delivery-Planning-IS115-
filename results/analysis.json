@@ -1,0 +1,474 @@
+{
+  "dataset": {
+    "parcels_per_day": {
+      "min": 763,
+      "mean": 793.35,
+      "max": 811
+    },
+    "locations": 36,
+    "hub_distance_km": {
+      "min": 22.131,
+      "median": 40.779,
+      "max": 50.517
+    },
+    "parcel_size": {
+      "min": 0.2,
+      "mean": 0.96,
+      "max": 1.8
+    },
+    "window_width_min": {
+      "min": 30.0,
+      "median": 93.0,
+      "max": 600.0
+    },
+    "window_end_minus_arrival_min": {
+      "min": 30.0,
+      "median": 218.0,
+      "max": 600.0
+    },
+    "share_arriving_before_noon": 0.736,
+    "distance_pairs": 1332,
+    "asymmetric_distance_pairs": 0
+  },
+  "ceiling": {
+    "impossible_per_day": {
+      "min": 23,
+      "mean": 28.05,
+      "max": 33
+    },
+    "upper_bound": {
+      "min": 0.9585,
+      "mean": 0.9646,
+      "max": 0.9715
+    },
+    "per_day": {
+      "day_001": {
+        "parcels": 799,
+        "impossible": 32,
+        "upper_bound": 0.9599
+      },
+      "day_002": {
+        "parcels": 772,
+        "impossible": 32,
+        "upper_bound": 0.9585
+      },
+      "day_003": {
+        "parcels": 794,
+        "impossible": 32,
+        "upper_bound": 0.9597
+      },
+      "day_004": {
+        "parcels": 808,
+        "impossible": 25,
+        "upper_bound": 0.9691
+      },
+      "day_005": {
+        "parcels": 806,
+        "impossible": 23,
+        "upper_bound": 0.9715
+      },
+      "day_006": {
+        "parcels": 784,
+        "impossible": 32,
+        "upper_bound": 0.9592
+      },
+      "day_007": {
+        "parcels": 805,
+        "impossible": 27,
+        "upper_bound": 0.9665
+      },
+      "day_008": {
+        "parcels": 808,
+        "impossible": 24,
+        "upper_bound": 0.9703
+      },
+      "day_009": {
+        "parcels": 798,
+        "impossible": 33,
+        "upper_bound": 0.9586
+      },
+      "day_010": {
+        "parcels": 811,
+        "impossible": 27,
+        "upper_bound": 0.9667
+      },
+      "day_011": {
+        "parcels": 808,
+        "impossible": 27,
+        "upper_bound": 0.9666
+      },
+      "day_012": {
+        "parcels": 783,
+        "impossible": 31,
+        "upper_bound": 0.9604
+      },
+      "day_013": {
+        "parcels": 789,
+        "impossible": 24,
+        "upper_bound": 0.9696
+      },
+      "day_014": {
+        "parcels": 778,
+        "impossible": 29,
+        "upper_bound": 0.9627
+      },
+      "day_015": {
+        "parcels": 796,
+        "impossible": 24,
+        "upper_bound": 0.9698
+      },
+      "day_016": {
+        "parcels": 797,
+        "impossible": 32,
+        "upper_bound": 0.9598
+      },
+      "day_017": {
+        "parcels": 789,
+        "impossible": 29,
+        "upper_bound": 0.9632
+      },
+      "day_018": {
+        "parcels": 763,
+        "impossible": 27,
+        "upper_bound": 0.9646
+      },
+      "day_019": {
+        "parcels": 797,
+        "impossible": 26,
+        "upper_bound": 0.9674
+      },
+      "day_020": {
+        "parcels": 782,
+        "impossible": 25,
+        "upper_bound": 0.968
+      }
+    }
+  },
+  "paired_tests": {
+    "A vs baseline": {
+      "days": 20,
+      "mean_difference": 0.485,
+      "min_difference": 0.3717,
+      "max_difference": 0.5928,
+      "days_better": 20,
+      "days_equal": 0,
+      "days_worse": 0,
+      "sign_test_p": 0.0,
+      "paired_t": 37.67
+    },
+    "B vs A": {
+      "days": 20,
+      "mean_difference": 0.1817,
+      "min_difference": 0.0804,
+      "max_difference": 0.2658,
+      "days_better": 20,
+      "days_equal": 0,
+      "days_worse": 0,
+      "sign_test_p": 0.0,
+      "paired_t": 13.27
+    },
+    "C vs A": {
+      "days": 20,
+      "mean_difference": 0.1365,
+      "min_difference": 0.0563,
+      "max_difference": 0.272,
+      "days_better": 20,
+      "days_equal": 0,
+      "days_worse": 0,
+      "sign_test_p": 0.0,
+      "paired_t": 10.53
+    },
+    "C vs B": {
+      "days": 20,
+      "mean_difference": -0.0452,
+      "min_difference": -0.1258,
+      "max_difference": 0.0239,
+      "days_better": 4,
+      "days_equal": 0,
+      "days_worse": 16,
+      "sign_test_p": 0.0118,
+      "paired_t": -5.04
+    },
+    "D vs B": {
+      "days": 20,
+      "mean_difference": 0.0011,
+      "min_difference": 0.0,
+      "max_difference": 0.0188,
+      "days_better": 2,
+      "days_equal": 18,
+      "days_worse": 0,
+      "sign_test_p": 0.5,
+      "paired_t": 1.19
+    },
+    "design step 1 vs 0": {
+      "days": 20,
+      "mean_difference": 0.14,
+      "min_difference": 0.0584,
+      "max_difference": 0.2352,
+      "days_better": 20,
+      "days_equal": 0,
+      "days_worse": 0,
+      "sign_test_p": 0.0,
+      "paired_t": 11.98
+    },
+    "design step 2 vs 1": {
+      "days": 20,
+      "mean_difference": 0.1447,
+      "min_difference": 0.0714,
+      "max_difference": 0.2133,
+      "days_better": 20,
+      "days_equal": 0,
+      "days_worse": 0,
+      "sign_test_p": 0.0,
+      "paired_t": 17.59
+    },
+    "design step 3 vs 2": {
+      "days": 20,
+      "mean_difference": 0.2004,
+      "min_difference": 0.1128,
+      "max_difference": 0.2785,
+      "days_better": 20,
+      "days_equal": 0,
+      "days_worse": 0,
+      "sign_test_p": 0.0,
+      "paired_t": 18.93
+    },
+    "design step 4 vs 2": {
+      "days": 20,
+      "mean_difference": 0.053,
+      "min_difference": -0.0275,
+      "max_difference": 0.1584,
+      "days_better": 16,
+      "days_equal": 0,
+      "days_worse": 4,
+      "sign_test_p": 0.0118,
+      "paired_t": 4.3
+    },
+    "design step 6 vs 4": {
+      "days": 20,
+      "mean_difference": 0.3291,
+      "min_difference": 0.1869,
+      "max_difference": 0.39,
+      "days_better": 20,
+      "days_equal": 0,
+      "days_worse": 0,
+      "sign_test_p": 0.0,
+      "paired_t": 31.11
+    },
+    "design step 7 vs 6": {
+      "days": 20,
+      "mean_difference": 0.0,
+      "min_difference": 0.0,
+      "max_difference": 0.0,
+      "days_better": 0,
+      "days_equal": 20,
+      "days_worse": 0,
+      "sign_test_p": 1.0,
+      "paired_t": null
+    }
+  },
+  "sensitivity": {
+    "means": {
+      "baseline": {
+        "on_time_rate": 0.2741,
+        "delivered_by_deadline_rate": 0.2741
+      },
+      "edf_nn": {
+        "on_time_rate": 0.4141,
+        "delivered_by_deadline_rate": 0.4327
+      },
+      "edf_nn_skip_overdue": {
+        "on_time_rate": 0.5587,
+        "delivered_by_deadline_rate": 0.6004
+      },
+      "edf_nn_wait": {
+        "on_time_rate": 0.7591,
+        "delivered_by_deadline_rate": 0.7591
+      },
+      "grow_2opt": {
+        "on_time_rate": 0.6117,
+        "delivered_by_deadline_rate": 0.8653
+      },
+      "grow_2opt_wait": {
+        "on_time_rate": 0.9408,
+        "delivered_by_deadline_rate": 0.9408
+      },
+      "grow_2opt_wait_fill": {
+        "on_time_rate": 0.9408,
+        "delivered_by_deadline_rate": 0.9408
+      },
+      "least_slack": {
+        "on_time_rate": 0.8956,
+        "delivered_by_deadline_rate": 0.8956
+      },
+      "ucs_routing": {
+        "on_time_rate": 0.9419,
+        "delivered_by_deadline_rate": 0.9419
+      }
+    },
+    "rank_by_on_time_rate": [
+      "ucs_routing",
+      "grow_2opt_wait",
+      "grow_2opt_wait_fill",
+      "least_slack",
+      "edf_nn_wait",
+      "grow_2opt",
+      "edf_nn_skip_overdue",
+      "edf_nn",
+      "baseline"
+    ],
+    "rank_by_delivered_by_deadline_rate": [
+      "ucs_routing",
+      "grow_2opt_wait",
+      "grow_2opt_wait_fill",
+      "least_slack",
+      "grow_2opt",
+      "edf_nn_wait",
+      "edf_nn_skip_overdue",
+      "edf_nn",
+      "baseline"
+    ]
+  },
+  "weak_days": {
+    "grow_2opt_wait_fill": {
+      "day_019": {
+        "parcels": 797,
+        "undelivered": 77,
+        "undelivered_impossible": 26,
+        "undelivered_by_arrival_hour": {
+          "10:00": 10,
+          "11:00": 26,
+          "12:00": 15,
+          "15:00": 3,
+          "16:00": 17,
+          "17:00": 6
+        },
+        "undelivered_by_window_end_hour": {
+          "11:00": 10,
+          "15:00": 41,
+          "18:00": 26
+        },
+        "all_parcels_by_arrival_hour": {
+          "08:00": 257,
+          "10:00": 127,
+          "11:00": 207,
+          "12:00": 110,
+          "15:00": 68,
+          "16:00": 22,
+          "17:00": 6
+        }
+      },
+      "day_004": {
+        "parcels": 808,
+        "undelivered": 29,
+        "undelivered_impossible": 25,
+        "undelivered_by_arrival_hour": {
+          "11:00": 1,
+          "12:00": 3,
+          "15:00": 2,
+          "16:00": 16,
+          "17:00": 7
+        },
+        "undelivered_by_window_end_hour": {
+          "14:00": 4,
+          "18:00": 25
+        },
+        "all_parcels_by_arrival_hour": {
+          "08:00": 256,
+          "10:00": 126,
+          "11:00": 213,
+          "12:00": 111,
+          "15:00": 74,
+          "16:00": 21,
+          "17:00": 7
+        }
+      }
+    },
+    "grow_2opt_wait": {
+      "day_019": {
+        "parcels": 797,
+        "undelivered": 131,
+        "undelivered_impossible": 26,
+        "undelivered_by_arrival_hour": {
+          "10:00": 32,
+          "11:00": 48,
+          "12:00": 25,
+          "15:00": 3,
+          "16:00": 17,
+          "17:00": 6
+        },
+        "undelivered_by_window_end_hour": {
+          "11:00": 32,
+          "15:00": 73,
+          "18:00": 26
+        },
+        "all_parcels_by_arrival_hour": {
+          "08:00": 257,
+          "10:00": 127,
+          "11:00": 207,
+          "12:00": 110,
+          "15:00": 68,
+          "16:00": 22,
+          "17:00": 6
+        }
+      },
+      "day_004": {
+        "parcels": 808,
+        "undelivered": 90,
+        "undelivered_impossible": 25,
+        "undelivered_by_arrival_hour": {
+          "11:00": 43,
+          "12:00": 22,
+          "15:00": 2,
+          "16:00": 16,
+          "17:00": 7
+        },
+        "undelivered_by_window_end_hour": {
+          "14:00": 65,
+          "18:00": 25
+        },
+        "all_parcels_by_arrival_hour": {
+          "08:00": 256,
+          "10:00": 126,
+          "11:00": 213,
+          "12:00": 111,
+          "15:00": 74,
+          "16:00": 21,
+          "17:00": 7
+        }
+      }
+    }
+  },
+  "stops_per_trip": {
+    "grow_2opt_wait_fill": {
+      "trips": 575,
+      "distribution": {
+        "1": 38,
+        "2": 55,
+        "3": 100,
+        "4": 79,
+        "5": 27,
+        "6": 83,
+        "7": 21,
+        "8": 5,
+        "9": 6,
+        "10": 14,
+        "11": 9,
+        "12": 23,
+        "13": 21,
+        "14": 15,
+        "15": 24,
+        "16": 17,
+        "17": 13,
+        "18": 11,
+        "19": 4,
+        "20": 6,
+        "21": 1,
+        "22": 1,
+        "24": 1,
+        "27": 1
+      },
+      "share_with_at_most_8_stops": 0.71
+    }
+  }
+}

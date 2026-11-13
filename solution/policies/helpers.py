@@ -201,10 +201,14 @@ def grow_trip(
       * no parcel already on the trip that is on time is pushed past its window end.
     Growing stops when no parcel can be added.
 
-    Complexity, for n candidates, L distinct locations (L <= n) and k parcels in the trip:
-    bucketing costs O(n log n). Each of the k steps prices L locations at up to k + 1
-    positions and scans a bucket to find a parcel that fits, so O(L k + n) per step and
-    O(n log n + k (L k + n)) per trip. Space O(n + k).
+    Complexity, for n candidates, L distinct locations (L <= n), k parcels and s distinct
+    stops in the trip: bucketing costs O(n log n). Each of the k steps prices L locations
+    at up to s + 1 positions, and for each position that passes the distance and slack
+    checks it scans that location's bucket for the first parcel that fits. Over all
+    locations the buckets hold n parcels, so a step is O(s + k + L s + s n) = O(s n) in the
+    worst case, and a trip is O(n log n + k s n), which is O(n^3) if k and s grow with n.
+    In practice the first parcel in a bucket usually fits, so a step is close to O(L s).
+    Space O(n + k).
     """
 
     distances = context["travel_distance"]
@@ -359,8 +363,9 @@ def fill_overdue(
     parcel ID, earliest position.
 
     Complexity, for m overdue parcels at L' locations, s stops and k parcels in the trip:
-    bucketing O(m log m); each of up to k added parcels prices L' locations at s + 1
-    positions after an O(s + k) timing pass, so O(m log m + k (L' s + s + k)). Space O(m + k).
+    bucketing O(m log m); each of up to k added parcels needs an O(s + k) timing pass, one
+    scan of every bucket for a parcel that fits (O(m) in total) and L' locations priced at
+    s + 1 positions, so O(m log m + k (m + L' s + s + k)). Space O(m + k).
     """
 
     distances = context["travel_distance"]

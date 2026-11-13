@@ -1,0 +1,7 @@
+{
+  "dispatch_calls": 130,
+  "wait_calls": 99,
+  "dispatch_seconds": 0.1153,
+  "mean_ms_per_call": 0.8873,
+  "max_ms_per_call": 4.4311
+}
