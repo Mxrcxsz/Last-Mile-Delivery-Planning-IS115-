@@ -28,7 +28,7 @@ from statistics import mean
 from typing import List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parent
-FILLS = (0.0, 0.25, 0.5, 0.75, 0.9)
+FILLS = (0.0, 0.25, 0.5, 0.75, 0.9, 1.0)
 SLACKS = (10.0, 20.0, 40.0)
 
 

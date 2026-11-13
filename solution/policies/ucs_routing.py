@@ -31,9 +31,12 @@ Algorithms and data structures: uniform-cost search (a best-first graph search, 
     the visited set.
 
 Complexity per dispatch call: Policy B's cost, plus the search. With s <= MAX_STOPS stops,
-    there are at most s! partial orders of each length, so the search is O(s! s log(s! s))
-    time and O(s! s) space in the worst case. MAX_STOPS = 8 caps this at a constant
-    (8! = 40,320 orders), and the upper bound and the windows prune most of them.
+    a partial tour of d stops is one of s!/(s - d)! orders, so the search holds at most
+    sum over d of s!/(s - d)! <= e s! states. Each state stores its order of up to s stops,
+    so space is O(s! s). Each popped state pushes up to s children, each copying an order
+    of O(s) and costing O(log(e s!)) = O(s log s) on the heap, so time is O(s! s^2 log s).
+    MAX_STOPS = 8 caps this at a constant (8! = 40,320 orders), and the upper bound and
+    the windows prune most of them.
     In general (no cap) exact routing is exponential in s, which is why the cap exists.
 """
 

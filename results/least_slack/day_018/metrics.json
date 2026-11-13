@@ -1,0 +1,17 @@
+{
+  "on_time_rate": 0.8296,
+  "parcels_total": 763,
+  "parcels_delivered": 635,
+  "parcels_on_time": 633,
+  "parcels_late": 2,
+  "parcels_early": 0,
+  "delivery_rate": 0.8322,
+  "delivered_by_deadline_rate": 0.8296,
+  "km_per_delivered_parcel": 5.962,
+  "trips": 27,
+  "total_km": 3786.027,
+  "km_per_trip": 140.223,
+  "parcels_per_trip": 23.519,
+  "capacity_utilisation": 0.7937,
+  "range_utilisation": 0.4382
+}

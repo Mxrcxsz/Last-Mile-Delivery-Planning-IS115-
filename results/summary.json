@@ -1,0 +1,1408 @@
+{
+  "description": "Results of every policy over the selected days, from results/<policy>/<day>/metrics.json.",
+  "headline_metric": "on_time_rate = parcels delivered inside [window_start, window_end] / all parcels of the day",
+  "notes": [
+    "mean, sd, min and max are over days; sd is the sample standard deviation (n - 1).",
+    "vs_baseline and vs_top compare daily on_time_rate: this policy minus the other.",
+    "top_policy_by_on_time_rate is the highest mean only; it is not a recommendation.",
+    "runtime times only the policy's dispatch() calls, from each day's timing.json. It depends on the machine and changes between runs; compare policies within one run.",
+    "rank orders policies by mean on_time_rate, highest first."
+  ],
+  "days": [
+    "day_001",
+    "day_002",
+    "day_003",
+    "day_004",
+    "day_005",
+    "day_006",
+    "day_007",
+    "day_008",
+    "day_009",
+    "day_010",
+    "day_011",
+    "day_012",
+    "day_013",
+    "day_014",
+    "day_015",
+    "day_016",
+    "day_017",
+    "day_018",
+    "day_019",
+    "day_020"
+  ],
+  "ranking": [
+    "ucs_routing",
+    "grow_2opt_wait",
+    "grow_2opt_wait_fill",
+    "least_slack",
+    "edf_nn_wait",
+    "grow_2opt",
+    "edf_nn_skip_overdue",
+    "edf_nn",
+    "baseline"
+  ],
+  "top_policy_by_on_time_rate": "ucs_routing",
+  "policies": {
+    "baseline": {
+      "rank": 9,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.2741,
+          "sd": 0.0161,
+          "min": 0.2475,
+          "min_day": "day_008",
+          "max": 0.3118,
+          "max_day": "day_007"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 321.05,
+          "sd": 28.2013,
+          "min": 274,
+          "min_day": "day_002",
+          "max": 368,
+          "max_day": "day_015"
+        },
+        "parcels_on_time": {
+          "mean": 217.45,
+          "sd": 13.4731,
+          "min": 200,
+          "min_day": "day_008",
+          "max": 251,
+          "max_day": "day_007"
+        },
+        "parcels_late": {
+          "mean": 103.6,
+          "sd": 26.4006,
+          "min": 50,
+          "min_day": "day_002",
+          "max": 136,
+          "max_day": "day_001"
+        },
+        "parcels_early": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "delivery_rate": {
+          "mean": 0.4045,
+          "sd": 0.0331,
+          "min": 0.3428,
+          "min_day": "day_008",
+          "max": 0.4623,
+          "max_day": "day_015"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.2741,
+          "sd": 0.0161,
+          "min": 0.2475,
+          "min_day": "day_008",
+          "max": 0.3118,
+          "max_day": "day_007"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 16.3299,
+          "sd": 1.469,
+          "min": 14.187,
+          "min_day": "day_015",
+          "max": 19.098,
+          "max_day": "day_002"
+        },
+        "trips": {
+          "mean": 20.65,
+          "sd": 0.6708,
+          "min": 20,
+          "min_day": "day_001",
+          "max": 22,
+          "max_day": "day_007"
+        },
+        "total_km": {
+          "mean": 5203.5476,
+          "sd": 32.8147,
+          "min": 5147.52,
+          "min_day": "day_009",
+          "max": 5258.442,
+          "max_day": "day_004"
+        },
+        "km_per_trip": {
+          "mean": 252.2595,
+          "sd": 8.9272,
+          "min": 235.191,
+          "min_day": "day_007",
+          "max": 262.922,
+          "max_day": "day_004"
+        },
+        "parcels_per_trip": {
+          "mean": 15.5565,
+          "sd": 1.3926,
+          "min": 13.667,
+          "min_day": "day_017",
+          "max": 17.9,
+          "max_day": "day_011"
+        },
+        "capacity_utilisation": {
+          "mean": 0.4983,
+          "sd": 0.0382,
+          "min": 0.4214,
+          "min_day": "day_007",
+          "max": 0.5617,
+          "max_day": "day_015"
+        },
+        "range_utilisation": {
+          "mean": 0.7883,
+          "sd": 0.0279,
+          "min": 0.735,
+          "min_day": "day_007",
+          "max": 0.8216,
+          "max_day": "day_004"
+        }
+      },
+      "vs_baseline": null,
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.6678,
+        "min_difference": -0.7072,
+        "max_difference": -0.5533,
+        "days_better": 0,
+        "days_equal": 0,
+        "days_worse": 20
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 30.7,
+        "wait_calls_per_day": 10.1,
+        "dispatch_seconds_per_day": 0.0053,
+        "mean_ms_per_call": 0.1723,
+        "max_ms_per_call": 0.8682,
+        "max_ms_day": "day_008"
+      }
+    },
+    "edf_nn": {
+      "rank": 8,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.4141,
+          "sd": 0.0455,
+          "min": 0.3653,
+          "min_day": "day_012",
+          "max": 0.5051,
+          "max_day": "day_014"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 625.65,
+          "sd": 26.3464,
+          "min": 585,
+          "min_day": "day_017",
+          "max": 689,
+          "max_day": "day_009"
+        },
+        "parcels_on_time": {
+          "mean": 328.55,
+          "sd": 36.8774,
+          "min": 283,
+          "min_day": "day_002",
+          "max": 400,
+          "max_day": "day_009"
+        },
+        "parcels_late": {
+          "mean": 282.3,
+          "sd": 30.196,
+          "min": 210,
+          "min_day": "day_014",
+          "max": 320,
+          "max_day": "day_003"
+        },
+        "parcels_early": {
+          "mean": 14.8,
+          "sd": 10.4961,
+          "min": 0,
+          "min_day": "day_003",
+          "max": 39,
+          "max_day": "day_009"
+        },
+        "delivery_rate": {
+          "mean": 0.7885,
+          "sd": 0.0278,
+          "min": 0.7414,
+          "min_day": "day_017",
+          "max": 0.8634,
+          "max_day": "day_009"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.4327,
+          "sd": 0.0545,
+          "min": 0.3824,
+          "min_day": "day_008",
+          "max": 0.5501,
+          "max_day": "day_009"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 7.7512,
+          "sd": 0.4014,
+          "min": 6.928,
+          "min_day": "day_009",
+          "max": 8.388,
+          "max_day": "day_017"
+        },
+        "trips": {
+          "mean": 22.85,
+          "sd": 0.9333,
+          "min": 22,
+          "min_day": "day_003",
+          "max": 25,
+          "max_day": "day_009"
+        },
+        "total_km": {
+          "mean": 4840.3529,
+          "sd": 104.7011,
+          "min": 4647.591,
+          "min_day": "day_014",
+          "max": 5025.123,
+          "max_day": "day_003"
+        },
+        "km_per_trip": {
+          "mean": 212.1975,
+          "sd": 10.4635,
+          "min": 190.939,
+          "min_day": "day_009",
+          "max": 228.415,
+          "max_day": "day_003"
+        },
+        "parcels_per_trip": {
+          "mean": 27.4019,
+          "sd": 1.1347,
+          "min": 25.435,
+          "min_day": "day_017",
+          "max": 28.864,
+          "max_day": "day_003"
+        },
+        "capacity_utilisation": {
+          "mean": 0.8717,
+          "sd": 0.0278,
+          "min": 0.8244,
+          "min_day": "day_013",
+          "max": 0.9085,
+          "max_day": "day_003"
+        },
+        "range_utilisation": {
+          "mean": 0.6631,
+          "sd": 0.0327,
+          "min": 0.5967,
+          "min_day": "day_009",
+          "max": 0.7138,
+          "max_day": "day_003"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.14,
+        "min_difference": 0.0584,
+        "max_difference": 0.2352,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.5279,
+        "min_difference": -0.5918,
+        "max_difference": -0.4344,
+        "days_better": 0,
+        "days_equal": 0,
+        "days_worse": 20
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 49.8,
+        "wait_calls_per_day": 26.9,
+        "dispatch_seconds_per_day": 0.028,
+        "mean_ms_per_call": 0.563,
+        "max_ms_per_call": 5.5298,
+        "max_ms_day": "day_004"
+      }
+    },
+    "edf_nn_skip_overdue": {
+      "rank": 7,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.5587,
+          "sd": 0.0483,
+          "min": 0.4687,
+          "min_day": "day_012",
+          "max": 0.627,
+          "max_day": "day_001"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 621.65,
+          "sd": 35.1976,
+          "min": 550,
+          "min_day": "day_018",
+          "max": 674,
+          "max_day": "day_016"
+        },
+        "parcels_on_time": {
+          "mean": 443.4,
+          "sd": 40.336,
+          "min": 367,
+          "min_day": "day_012",
+          "max": 501,
+          "max_day": "day_001"
+        },
+        "parcels_late": {
+          "mean": 145.15,
+          "sd": 28.1131,
+          "min": 94,
+          "min_day": "day_010",
+          "max": 197,
+          "max_day": "day_005"
+        },
+        "parcels_early": {
+          "mean": 33.1,
+          "sd": 14.8462,
+          "min": 7,
+          "min_day": "day_014",
+          "max": 57,
+          "max_day": "day_019"
+        },
+        "delivery_rate": {
+          "mean": 0.7835,
+          "sd": 0.0407,
+          "min": 0.7155,
+          "min_day": "day_007",
+          "max": 0.8457,
+          "max_day": "day_016"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.6004,
+          "sd": 0.0566,
+          "min": 0.4904,
+          "min_day": "day_012",
+          "max": 0.6796,
+          "max_day": "day_001"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 7.7313,
+          "sd": 0.5815,
+          "min": 6.933,
+          "min_day": "day_016",
+          "max": 8.904,
+          "max_day": "day_018"
+        },
+        "trips": {
+          "mean": 23.25,
+          "sd": 1.713,
+          "min": 21,
+          "min_day": "day_003",
+          "max": 27,
+          "max_day": "day_016"
+        },
+        "total_km": {
+          "mean": 4787.1345,
+          "sd": 103.1111,
+          "min": 4614.57,
+          "min_day": "day_006",
+          "max": 4994.382,
+          "max_day": "day_017"
+        },
+        "km_per_trip": {
+          "mean": 207.1164,
+          "sd": 17.7958,
+          "min": 173.075,
+          "min_day": "day_016",
+          "max": 236.478,
+          "max_day": "day_012"
+        },
+        "parcels_per_trip": {
+          "mean": 26.7872,
+          "sd": 1.1521,
+          "min": 24.963,
+          "min_day": "day_016",
+          "max": 28.696,
+          "max_day": "day_004"
+        },
+        "capacity_utilisation": {
+          "mean": 0.8536,
+          "sd": 0.0315,
+          "min": 0.7875,
+          "min_day": "day_016",
+          "max": 0.9038,
+          "max_day": "day_003"
+        },
+        "range_utilisation": {
+          "mean": 0.6472,
+          "sd": 0.0556,
+          "min": 0.5409,
+          "min_day": "day_016",
+          "max": 0.739,
+          "max_day": "day_012"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.2846,
+        "min_difference": 0.1665,
+        "max_difference": 0.3604,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.3832,
+        "min_difference": -0.4853,
+        "max_difference": -0.2471,
+        "days_better": 0,
+        "days_equal": 0,
+        "days_worse": 20
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 53.6,
+        "wait_calls_per_day": 30.4,
+        "dispatch_seconds_per_day": 0.0328,
+        "mean_ms_per_call": 0.6126,
+        "max_ms_per_call": 12.6034,
+        "max_ms_day": "day_005"
+      }
+    },
+    "edf_nn_wait": {
+      "rank": 5,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.7591,
+          "sd": 0.0563,
+          "min": 0.6619,
+          "min_day": "day_002",
+          "max": 0.875,
+          "max_day": "day_011"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 602.45,
+          "sd": 48.1319,
+          "min": 511,
+          "min_day": "day_002",
+          "max": 707,
+          "max_day": "day_011"
+        },
+        "parcels_on_time": {
+          "mean": 602.45,
+          "sd": 48.1319,
+          "min": 511,
+          "min_day": "day_002",
+          "max": 707,
+          "max_day": "day_011"
+        },
+        "parcels_late": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "parcels_early": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "delivery_rate": {
+          "mean": 0.7591,
+          "sd": 0.0563,
+          "min": 0.6619,
+          "min_day": "day_002",
+          "max": 0.875,
+          "max_day": "day_011"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.7591,
+          "sd": 0.0563,
+          "min": 0.6619,
+          "min_day": "day_002",
+          "max": 0.875,
+          "max_day": "day_011"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 6.4932,
+          "sd": 0.4004,
+          "min": 5.978,
+          "min_day": "day_005",
+          "max": 7.222,
+          "max_day": "day_019"
+        },
+        "trips": {
+          "mean": 24.3,
+          "sd": 1.9762,
+          "min": 20,
+          "min_day": "day_002",
+          "max": 28,
+          "max_day": "day_011"
+        },
+        "total_km": {
+          "mean": 3899.9538,
+          "sd": 241.1628,
+          "min": 3523.083,
+          "min_day": "day_008",
+          "max": 4339.191,
+          "max_day": "day_014"
+        },
+        "km_per_trip": {
+          "mean": 160.9048,
+          "sd": 7.8744,
+          "min": 150.81,
+          "min_day": "day_016",
+          "max": 179.899,
+          "max_day": "day_002"
+        },
+        "parcels_per_trip": {
+          "mean": 24.8264,
+          "sd": 1.2439,
+          "min": 22.92,
+          "min_day": "day_013",
+          "max": 27.714,
+          "max_day": "day_008"
+        },
+        "capacity_utilisation": {
+          "mean": 0.7887,
+          "sd": 0.0428,
+          "min": 0.7217,
+          "min_day": "day_013",
+          "max": 0.8688,
+          "max_day": "day_020"
+        },
+        "range_utilisation": {
+          "mean": 0.5028,
+          "sd": 0.0246,
+          "min": 0.4713,
+          "min_day": "day_006",
+          "max": 0.5622,
+          "max_day": "day_002"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.485,
+        "min_difference": 0.3717,
+        "max_difference": 0.5928,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.1828,
+        "min_difference": -0.2658,
+        "max_difference": -0.0804,
+        "days_better": 0,
+        "days_equal": 0,
+        "days_worse": 20
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 140.1,
+        "wait_calls_per_day": 115.8,
+        "dispatch_seconds_per_day": 0.0554,
+        "mean_ms_per_call": 0.3955,
+        "max_ms_per_call": 34.2265,
+        "max_ms_day": "day_014"
+      }
+    },
+    "grow_2opt": {
+      "rank": 6,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.6117,
+          "sd": 0.0261,
+          "min": 0.5665,
+          "min_day": "day_020",
+          "max": 0.6487,
+          "max_day": "day_019"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 686.55,
+          "sd": 22.3265,
+          "min": 646,
+          "min_day": "day_012",
+          "max": 726,
+          "max_day": "day_019"
+        },
+        "parcels_on_time": {
+          "mean": 485.25,
+          "sd": 20.9281,
+          "min": 443,
+          "min_day": "day_020",
+          "max": 521,
+          "max_day": "day_008"
+        },
+        "parcels_late": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "parcels_early": {
+          "mean": 201.3,
+          "sd": 26.248,
+          "min": 155,
+          "min_day": "day_012",
+          "max": 243,
+          "max_day": "day_020"
+        },
+        "delivery_rate": {
+          "mean": 0.8653,
+          "sd": 0.0225,
+          "min": 0.82,
+          "min_day": "day_013",
+          "max": 0.9109,
+          "max_day": "day_019"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.8653,
+          "sd": 0.0225,
+          "min": 0.82,
+          "min_day": "day_013",
+          "max": 0.9109,
+          "max_day": "day_019"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 5.7569,
+          "sd": 0.1937,
+          "min": 5.433,
+          "min_day": "day_005",
+          "max": 6.128,
+          "max_day": "day_013"
+        },
+        "trips": {
+          "mean": 32.45,
+          "sd": 0.7592,
+          "min": 31,
+          "min_day": "day_001",
+          "max": 34,
+          "max_day": "day_003"
+        },
+        "total_km": {
+          "mean": 3949.0478,
+          "sd": 77.9314,
+          "min": 3824.229,
+          "min_day": "day_016",
+          "max": 4085.061,
+          "max_day": "day_004"
+        },
+        "km_per_trip": {
+          "mean": 121.7607,
+          "sd": 3.7522,
+          "min": 114.467,
+          "min_day": "day_003",
+          "max": 127.978,
+          "max_day": "day_001"
+        },
+        "parcels_per_trip": {
+          "mean": 21.1665,
+          "sd": 0.8005,
+          "min": 19.606,
+          "min_day": "day_013",
+          "max": 22.406,
+          "max_day": "day_005"
+        },
+        "capacity_utilisation": {
+          "mean": 0.6776,
+          "sd": 0.0211,
+          "min": 0.6356,
+          "min_day": "day_013",
+          "max": 0.7148,
+          "max_day": "day_002"
+        },
+        "range_utilisation": {
+          "mean": 0.3805,
+          "sd": 0.0117,
+          "min": 0.3577,
+          "min_day": "day_003",
+          "max": 0.3999,
+          "max_day": "day_001"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.3376,
+        "min_difference": 0.2613,
+        "max_difference": 0.3973,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.3302,
+        "min_difference": -0.39,
+        "max_difference": -0.1869,
+        "days_better": 0,
+        "days_equal": 0,
+        "days_worse": 20
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 109.5,
+        "wait_calls_per_day": 77.0,
+        "dispatch_seconds_per_day": 0.1119,
+        "mean_ms_per_call": 1.0222,
+        "max_ms_per_call": 110.5581,
+        "max_ms_day": "day_010"
+      }
+    },
+    "grow_2opt_wait": {
+      "rank": 2,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.9408,
+          "sd": 0.0311,
+          "min": 0.8356,
+          "min_day": "day_019",
+          "max": 0.9615,
+          "max_day": "day_005"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 746.35,
+          "sd": 26.3444,
+          "min": 666,
+          "min_day": "day_019",
+          "max": 776,
+          "max_day": "day_010"
+        },
+        "parcels_on_time": {
+          "mean": 746.35,
+          "sd": 26.3444,
+          "min": 666,
+          "min_day": "day_019",
+          "max": 776,
+          "max_day": "day_010"
+        },
+        "parcels_late": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "parcels_early": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "delivery_rate": {
+          "mean": 0.9408,
+          "sd": 0.0311,
+          "min": 0.8356,
+          "min_day": "day_019",
+          "max": 0.9615,
+          "max_day": "day_005"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.9408,
+          "sd": 0.0311,
+          "min": 0.8356,
+          "min_day": "day_019",
+          "max": 0.9615,
+          "max_day": "day_005"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 4.4306,
+          "sd": 0.2206,
+          "min": 4.12,
+          "min_day": "day_015",
+          "max": 5.022,
+          "max_day": "day_019"
+        },
+        "trips": {
+          "mean": 28.75,
+          "sd": 1.4096,
+          "min": 26,
+          "min_day": "day_002",
+          "max": 32,
+          "max_day": "day_013"
+        },
+        "total_km": {
+          "mean": 3302.9137,
+          "sd": 117.5062,
+          "min": 3056.7,
+          "min_day": "day_015",
+          "max": 3578.019,
+          "max_day": "day_013"
+        },
+        "km_per_trip": {
+          "mean": 115.0019,
+          "sd": 3.7146,
+          "min": 107.819,
+          "min_day": "day_011",
+          "max": 124.307,
+          "max_day": "day_002"
+        },
+        "parcels_per_trip": {
+          "mean": 26.0041,
+          "sd": 1.2908,
+          "min": 23.688,
+          "min_day": "day_013",
+          "max": 28.704,
+          "max_day": "day_005"
+        },
+        "capacity_utilisation": {
+          "mean": 0.8288,
+          "sd": 0.0433,
+          "min": 0.7575,
+          "min_day": "day_019",
+          "max": 0.9012,
+          "max_day": "day_005"
+        },
+        "range_utilisation": {
+          "mean": 0.3594,
+          "sd": 0.0116,
+          "min": 0.3369,
+          "min_day": "day_011",
+          "max": 0.3885,
+          "max_day": "day_002"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.6667,
+        "min_difference": 0.5533,
+        "max_difference": 0.7072,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.0011,
+        "min_difference": -0.0188,
+        "max_difference": 0.0,
+        "days_better": 0,
+        "days_equal": 18,
+        "days_worse": 2
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 186.9,
+        "wait_calls_per_day": 158.2,
+        "dispatch_seconds_per_day": 0.1496,
+        "mean_ms_per_call": 0.8001,
+        "max_ms_per_call": 43.076,
+        "max_ms_day": "day_001"
+      }
+    },
+    "grow_2opt_wait_fill": {
+      "rank": 3,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.9408,
+          "sd": 0.0311,
+          "min": 0.8356,
+          "min_day": "day_019",
+          "max": 0.9615,
+          "max_day": "day_005"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 757.35,
+          "sd": 20.5074,
+          "min": 712,
+          "min_day": "day_002",
+          "max": 784,
+          "max_day": "day_010"
+        },
+        "parcels_on_time": {
+          "mean": 746.35,
+          "sd": 26.3444,
+          "min": 666,
+          "min_day": "day_019",
+          "max": 776,
+          "max_day": "day_010"
+        },
+        "parcels_late": {
+          "mean": 11,
+          "sd": 17.0139,
+          "min": 1,
+          "min_day": "day_003",
+          "max": 61,
+          "max_day": "day_004"
+        },
+        "parcels_early": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "delivery_rate": {
+          "mean": 0.9546,
+          "sd": 0.0175,
+          "min": 0.9034,
+          "min_day": "day_019",
+          "max": 0.9702,
+          "max_day": "day_005"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.9408,
+          "sd": 0.0311,
+          "min": 0.8356,
+          "min_day": "day_019",
+          "max": 0.9615,
+          "max_day": "day_005"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 4.3933,
+          "sd": 0.1895,
+          "min": 3.975,
+          "min_day": "day_015",
+          "max": 4.699,
+          "max_day": "day_013"
+        },
+        "trips": {
+          "mean": 28.75,
+          "sd": 1.4096,
+          "min": 26,
+          "min_day": "day_002",
+          "max": 32,
+          "max_day": "day_013"
+        },
+        "total_km": {
+          "mean": 3325.3128,
+          "sd": 124.8904,
+          "min": 3056.7,
+          "min_day": "day_015",
+          "max": 3585.453,
+          "max_day": "day_013"
+        },
+        "km_per_trip": {
+          "mean": 115.7814,
+          "sd": 3.9882,
+          "min": 107.846,
+          "min_day": "day_011",
+          "max": 124.307,
+          "max_day": "day_002"
+        },
+        "parcels_per_trip": {
+          "mean": 26.3913,
+          "sd": 1.2522,
+          "min": 23.844,
+          "min_day": "day_013",
+          "max": 28.963,
+          "max_day": "day_005"
+        },
+        "capacity_utilisation": {
+          "mean": 0.8412,
+          "sd": 0.0398,
+          "min": 0.7632,
+          "min_day": "day_013",
+          "max": 0.9069,
+          "max_day": "day_005"
+        },
+        "range_utilisation": {
+          "mean": 0.3618,
+          "sd": 0.0125,
+          "min": 0.337,
+          "min_day": "day_011",
+          "max": 0.3885,
+          "max_day": "day_002"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.6667,
+        "min_difference": 0.5533,
+        "max_difference": 0.7072,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.0011,
+        "min_difference": -0.0188,
+        "max_difference": 0.0,
+        "days_better": 0,
+        "days_equal": 18,
+        "days_worse": 2
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 184.8,
+        "wait_calls_per_day": 156.1,
+        "dispatch_seconds_per_day": 0.1524,
+        "mean_ms_per_call": 0.8242,
+        "max_ms_per_call": 44.2105,
+        "max_ms_day": "day_001"
+      }
+    },
+    "least_slack": {
+      "rank": 4,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.8956,
+          "sd": 0.0346,
+          "min": 0.8296,
+          "min_day": "day_018",
+          "max": 0.9598,
+          "max_day": "day_016"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 744.65,
+          "sd": 32.0678,
+          "min": 635,
+          "min_day": "day_018",
+          "max": 781,
+          "max_day": "day_011"
+        },
+        "parcels_on_time": {
+          "mean": 710.65,
+          "sd": 32.3407,
+          "min": 633,
+          "min_day": "day_018",
+          "max": 765,
+          "max_day": "day_016"
+        },
+        "parcels_late": {
+          "mean": 34,
+          "sd": 22.9416,
+          "min": 0,
+          "min_day": "day_016",
+          "max": 71,
+          "max_day": "day_001"
+        },
+        "parcels_early": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "delivery_rate": {
+          "mean": 0.9384,
+          "sd": 0.0308,
+          "min": 0.8322,
+          "min_day": "day_018",
+          "max": 0.9666,
+          "max_day": "day_011"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.8956,
+          "sd": 0.0346,
+          "min": 0.8296,
+          "min_day": "day_018",
+          "max": 0.9598,
+          "max_day": "day_016"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 5.44,
+          "sd": 0.2824,
+          "min": 5.013,
+          "min_day": "day_011",
+          "max": 5.962,
+          "max_day": "day_018"
+        },
+        "trips": {
+          "mean": 28.15,
+          "sd": 1.4965,
+          "min": 26,
+          "min_day": "day_005",
+          "max": 31,
+          "max_day": "day_006"
+        },
+        "total_km": {
+          "mean": 4045.839,
+          "sd": 181.5407,
+          "min": 3785.847,
+          "min_day": "day_001",
+          "max": 4332.846,
+          "max_day": "day_013"
+        },
+        "km_per_trip": {
+          "mean": 144.1571,
+          "sd": 10.6074,
+          "min": 124.674,
+          "min_day": "day_006",
+          "max": 159.342,
+          "max_day": "day_010"
+        },
+        "parcels_per_trip": {
+          "mean": 26.5071,
+          "sd": 1.5571,
+          "min": 23.519,
+          "min_day": "day_018",
+          "max": 29.654,
+          "max_day": "day_005"
+        },
+        "capacity_utilisation": {
+          "mean": 0.8459,
+          "sd": 0.0445,
+          "min": 0.7804,
+          "min_day": "day_012",
+          "max": 0.9315,
+          "max_day": "day_005"
+        },
+        "range_utilisation": {
+          "mean": 0.4505,
+          "sd": 0.0331,
+          "min": 0.3896,
+          "min_day": "day_006",
+          "max": 0.4979,
+          "max_day": "day_010"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.6215,
+        "min_difference": 0.5649,
+        "max_difference": 0.6787,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": {
+        "days_compared": 20,
+        "mean_difference": -0.0463,
+        "min_difference": -0.1258,
+        "max_difference": 0.0239,
+        "days_better": 4,
+        "days_equal": 0,
+        "days_worse": 16
+      },
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 117.0,
+        "wait_calls_per_day": 88.9,
+        "dispatch_seconds_per_day": 0.0947,
+        "mean_ms_per_call": 0.8091,
+        "max_ms_per_call": 84.8631,
+        "max_ms_day": "day_007"
+      }
+    },
+    "ucs_routing": {
+      "rank": 1,
+      "days": 20,
+      "metrics": {
+        "on_time_rate": {
+          "mean": 0.9419,
+          "sd": 0.0312,
+          "min": 0.8356,
+          "min_day": "day_019",
+          "max": 0.9615,
+          "max_day": "day_005"
+        },
+        "parcels_total": {
+          "mean": 793.35,
+          "sd": 13.204,
+          "min": 763,
+          "min_day": "day_018",
+          "max": 811,
+          "max_day": "day_010"
+        },
+        "parcels_delivered": {
+          "mean": 757.35,
+          "sd": 20.5074,
+          "min": 712,
+          "min_day": "day_002",
+          "max": 784,
+          "max_day": "day_010"
+        },
+        "parcels_on_time": {
+          "mean": 747.25,
+          "sd": 26.608,
+          "min": 666,
+          "min_day": "day_019",
+          "max": 779,
+          "max_day": "day_010"
+        },
+        "parcels_late": {
+          "mean": 10.1,
+          "sd": 16.6319,
+          "min": 1,
+          "min_day": "day_003",
+          "max": 61,
+          "max_day": "day_004"
+        },
+        "parcels_early": {
+          "mean": 0,
+          "sd": 0.0,
+          "min": 0,
+          "min_day": "day_001",
+          "max": 0,
+          "max_day": "day_001"
+        },
+        "delivery_rate": {
+          "mean": 0.9546,
+          "sd": 0.0175,
+          "min": 0.9034,
+          "min_day": "day_019",
+          "max": 0.9702,
+          "max_day": "day_005"
+        },
+        "delivered_by_deadline_rate": {
+          "mean": 0.9419,
+          "sd": 0.0312,
+          "min": 0.8356,
+          "min_day": "day_019",
+          "max": 0.9615,
+          "max_day": "day_005"
+        },
+        "km_per_delivered_parcel": {
+          "mean": 4.3919,
+          "sd": 0.1843,
+          "min": 4.026,
+          "min_day": "day_015",
+          "max": 4.699,
+          "max_day": "day_013"
+        },
+        "trips": {
+          "mean": 28.8,
+          "sd": 1.3611,
+          "min": 26,
+          "min_day": "day_002",
+          "max": 32,
+          "max_day": "day_013"
+        },
+        "total_km": {
+          "mean": 3324.2493,
+          "sd": 120.425,
+          "min": 3095.814,
+          "min_day": "day_015",
+          "max": 3585.357,
+          "max_day": "day_013"
+        },
+        "km_per_trip": {
+          "mean": 115.5451,
+          "sd": 4.1341,
+          "min": 107.437,
+          "min_day": "day_011",
+          "max": 124.307,
+          "max_day": "day_002"
+        },
+        "parcels_per_trip": {
+          "mean": 26.3405,
+          "sd": 1.1815,
+          "min": 23.844,
+          "min_day": "day_013",
+          "max": 28.963,
+          "max_day": "day_005"
+        },
+        "capacity_utilisation": {
+          "mean": 0.8396,
+          "sd": 0.0378,
+          "min": 0.7632,
+          "min_day": "day_013",
+          "max": 0.9069,
+          "max_day": "day_005"
+        },
+        "range_utilisation": {
+          "mean": 0.3611,
+          "sd": 0.0129,
+          "min": 0.3357,
+          "min_day": "day_011",
+          "max": 0.3885,
+          "max_day": "day_002"
+        }
+      },
+      "vs_baseline": {
+        "days_compared": 20,
+        "mean_difference": 0.6678,
+        "min_difference": 0.5533,
+        "max_difference": 0.7072,
+        "days_better": 20,
+        "days_equal": 0,
+        "days_worse": 0
+      },
+      "vs_top": null,
+      "runtime": {
+        "days_timed": 20,
+        "dispatch_calls_per_day": 184.8,
+        "wait_calls_per_day": 156.0,
+        "dispatch_seconds_per_day": 0.3743,
+        "mean_ms_per_call": 2.0254,
+        "max_ms_per_call": 129.2381,
+        "max_ms_day": "day_011"
+      }
+    }
+  }
+}

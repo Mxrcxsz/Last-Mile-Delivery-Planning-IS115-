@@ -84,6 +84,8 @@ def calculate_metrics(
         "parcels_late": late,
         "parcels_early": early,
         "delivery_rate": round(delivered / total, 4) if total else 0.0,
+        # Sensitivity check: the rate if early deliveries also counted as successes.
+        "delivered_by_deadline_rate": round((on_time + early) / total, 4) if total else 0.0,
         "km_per_delivered_parcel": round(total_km / delivered, 3) if delivered else 0.0,
         "trips": number_of_trips,
         "total_km": round(total_km, 3),

@@ -1,6 +1,6 @@
 # IS115 Last-Mile Delivery: findings for the report
 
-Prepared 12 Nov 2026 from the code on branch `marcus` after the policies were merged into four files. Deadline: Fri 13 Nov 2026, 23:59.
+Prepared 13 Nov 2026 from the code on branch `marcus`, after an external review; every number below was regenerated on 13 Nov. Deadline: Fri 13 Nov 2026, 23:59.
 
 ## How to use this file
 
@@ -9,7 +9,7 @@ This is source material for writing the project report. It is not the report.
 - Every number below comes from runs of the code in this repository on day_001 to day_020. Do not invent numbers or round them differently from what is here; if a number is needed that is not here, ask for it to be computed.
 - The report is limited to **8 pages, excluding references**. Prioritise by the rubric weights below.
 - The submitted policies are the supplied **baseline** and four team policies: **A** `edf_nn_wait`, **B** `grow_2opt_wait_fill`, **C** `least_slack`, **D** `ucs_routing`.
-- Earlier versions (A without waiting, A with overdue parcels last, B without its timing rules, B without filling) were merged into these four. They are **not** separate policies in the submission. Section 7 gives their numbers as the design history (how each idea earned its gain); they are reproducible from git commit `92948fd` or, for one step, from the tuning script.
+- Four earlier versions are also in `solution/policies/` as **explored policies** (the brief asks for every policy explored): `edf_nn`, `edf_nn_skip_overdue`, `grow_2opt`, `grow_2opt_wait`. They are design steps superseded by A and B; section 7 uses them to show how each idea earned its gain. All their numbers reproduce from the submission with `run_experiments.py` and `analyse_results.py`.
 - Each team member will be asked an exam question about this work (10% of the grade), so explanations should be ones a student can defend, not just state.
 
 ## 1. What the brief requires
@@ -126,7 +126,7 @@ Shared building blocks (`helpers.py`):
   - no parcel already on the trip is pushed past its window end (checked with the slack array).
 - Data structure: a **hash map from location to a list of parcels sorted by (window end, parcel ID)**. All parcels at one location cost the same to insert, so each step prices each location once per position instead of each parcel.
 - Routing: insertion order, then **2-opt** over the distinct stops: reverse a segment of stops; keep the move only if the trip gets strictly shorter and the on-time count does not fall. First improvement: restart after each kept move, stop when no move helps.
-- Timing: return `[]` (wait 10 minutes) if no candidate can be reached inside its window yet, or if the trip is **nearly empty** (load below `MIN_FILL` = 75% of capacity) and every parcel on it still has at least `WAIT_SLACK` = 10 minutes of slack one round later. `MIN_FILL` and `WAIT_SLACK` were chosen by grid search on day_001 to day_010 only and checked on day_011 to day_020 (section 6.5).
+- Timing: return `[]` (wait 10 minutes) if no candidate can be reached inside its window yet, or if the trip is **nearly empty** (load below `MIN_FILL` = 75% of capacity) and every parcel on it still has at least `WAIT_SLACK` = 10 minutes of slack one round later. `MIN_FILL` and `WAIT_SLACK` were chosen by grid search on day_001 to day_010 only and checked on day_011 to day_020 (section 6.6).
 - Filling: when the trip leaves, its spare capacity is filled with **overdue** parcels by cheapest insertion, but only where the detour pushes no on-time parcel past its window end. An overdue parcel can only be late (by definition even a direct drive arrives after its window closes), so it earns nothing on the metric; filling only adds deliveries that cost no on-time delivery on that trip. Overdue parcels never cause a departure, a wait or an extra trip.
 - Consequence: B never delivers early; its only late deliveries are overdue parcels that would otherwise not be delivered at all.
 
@@ -173,37 +173,39 @@ Notation: N = arrived parcels, n = candidate parcels (n ≤ N), k = parcels in t
 | --- | --- | --- | --- |
 | baseline | O(N + n log n) | O(n + k) | Sort by arrival, then an O(1) check per candidate |
 | A | O(N + n log n + n k²) | O(n + k) | Sort; each of n candidates may need a nearest-neighbor tour, O(k²), plus an O(k) window check; waiting test O(k) |
-| B | O(N + n log n + k(Lk + n) + P s²(s + k) + m log m + k(L′s + s + k)) | O(N + k) | Filter O(N); bucketing O(n log n); growth: k steps, each pricing L locations at up to k + 1 positions; 2-opt: O(s²) moves per pass, each scored in O(s + k); waiting O(k); filling as growth over the overdue buckets |
+| B | O(N + n log n + k s n + P s²(s + k) + m log m + k(m + L′s + s + k)) | O(N + k) | Filter O(N); bucketing O(n log n); growth: k steps, each pricing L locations at up to s + 1 positions **and, for each position that passes the checks, scanning that location's bucket** for the first parcel that fits, so O(s n) per step in the worst case; 2-opt: O(s²) moves per pass, each scored in O(s + k); waiting O(k); filling: k steps, each with an O(m) bucket scan and L′ locations priced at s + 1 positions |
 | C | O(N + n log n + n(s + k) + P s²(s + k)) plus filling as B | O(N + k) | Heapify O(n); n pops O(n log n); each popped parcel priced at s + 1 positions after an O(s + k) timing pass; 2-opt as B |
-| D | As B, plus O(s! · s · log(s! · s)) | O(N + s! · s) | The search: at most s! partial orders, each expanded in O(s) with O(log) heap operations; capped at s ≤ 8, so a constant (8! = 40,320) in practice; exponential without the cap |
+| D | As B, plus O(s!·s²·log s) | O(N + s!·s) | The search holds at most Σ_d s!/(s − d)! ≤ e·s! states (partial tours of d stops). Each state stores its order of up to s stops, hence O(s!·s) space. Each popped state pushes up to s children, each copying an O(s) order and costing O(log(e·s!)) = O(s log s) on the heap, hence O(s!·s²·log s) time. Capped at s ≤ 8, so a constant (8! = 40,320) in practice; exponential without the cap |
 
 Points to discuss:
 
-- Because L ≤ 36 and k ≈ 30 here, B is close to linear in N in practice. In the worst case (k and L growing with n) its growth step is O(n³), as for A.
-- The location buckets make B's growth cost depend on L (locations) rather than n (parcels), because all parcels at a location have the same insertion cost. This is the key data-structure choice.
+- B's growth is O(k s n) per trip in the worst case, because the bucket scan sits inside the position loop; with k and s growing with n this is O(n³), as for A. In practice the first parcel in a bucket usually fits, so a step costs close to O(L s), and with L ≤ 36 and k ≈ 30, B is close to linear in N.
+- The location buckets mean B prices each location once per position, because all parcels at a location have the same insertion cost; in the typical case the cost then depends on L (locations), not n (parcels).
 - 2-opt works on distinct stops (s), not parcels (k), since parcels at one stop are delivered together.
 - Each move is scored in full (O(s + k)), not with the classic O(1) four-edge delta, because the interface describes distances as directed (reversing a segment reverses its legs) and the on-time count depends on the arrival time at every later stop. (In this data the matrix is in fact symmetric.)
 - P is not bounded by a polynomial in theory (each kept move strictly shortens the trip and there are finitely many orders), but is small in practice; a pass cap would make the bound strict.
-- C trades B's O(k(Lk + n)) cheapest-insertion search for O(n log n + n(s + k)) heap selection. With n in the hundreds and L ≤ 36, that is more work in practice, not less (measured below).
+- C replaces B's bucketed cheapest-insertion search with heap selection: O(n log n) to order the candidates and O(n(s + k)) to place them.
 - Waiting does not change the cost of one call, but a waiting vehicle is asked again every round, so the number of calls per day rises, to at most 58 × 10 = 580.
 
-Measured runtime: time spent inside each policy's `dispatch()` only (not the simulator, the performance monitor or Python start-up), from `python3 run_experiments.py --workers 1` on a MacBook. Per-day values are in `results/<policy>/<day>/timing.json`; the means are in the `runtime` section of `results/summary.json`. Timings depend on the machine and vary between runs; compare policies within one run.
+Measured runtime: time spent inside each policy's `dispatch()` only (not the simulator, the performance monitor or Python start-up), from `python3 run_experiments.py --workers 1` on a MacBook on 13 Nov. Per-day values are in `results/<policy>/<day>/timing.json`; the means are in the `runtime` section of `results/summary.json`. B, C and D were timed in four separate runs to check that the relative costs are stable.
 
 | Policy | `dispatch()` calls per day | of which waits (`[]`) | Policy time per day | Mean per call | Slowest call |
 | --- | --- | --- | --- | --- | --- |
-| baseline | 30.7 | 10.1 | 0.009 s | 0.28 ms | 9.9 ms |
-| A | 140.1 | 115.8 | 0.083 s | 0.59 ms | 57.7 ms |
-| B | 184.8 | 156.1 | 0.206 s | 1.12 ms | 101.3 ms |
-| C | 117.0 | 88.9 | 0.259 s | 2.21 ms | 161.4 ms |
-| D | 184.8 | 156.0 | 0.486 s | 2.63 ms | 324.2 ms |
+| baseline | 30.7 | 10.1 | 0.005 s | 0.17 ms | 0.9 ms |
+| A | 140.1 | 115.8 | 0.055 s | 0.40 ms | 34.2 ms |
+| B | 184.8 | 156.1 | 0.152 s | 0.82 ms | 44.2 ms |
+| C | 117.0 | 88.9 | 0.095 s | 0.81 ms | 84.9 ms |
+| D | 184.8 | 156.0 | 0.374 s | 2.03 ms | 129.2 ms |
+
+Across the four runs: C/B policy time per day 0.58 to 0.63; C/B time per call 0.88 to 0.98; D/B time per day 1.92 to 2.46. Absolute times differ between machines (an independent rerun measured lower times overall); quote only the relative costs.
 
 Reading it:
 
-- **Compute is negligible.** Even D spends under half a second per day inside the policy, and its slowest single call (324 ms) is far below the 10-minute planning interval. Earlier wall-clock timings of 20 to 40 s per 20 days were almost entirely the simulator and Python start-up.
+- **Compute is negligible.** Even D spends under 0.4 s per day inside the policy, and the slowest single call of any policy (129 ms) is far below the 10-minute planning interval. Earlier wall-clock timings of 20 to 40 s per 20 days were almost entirely the simulator and Python start-up.
 - **Waiting multiplies the calls.** Policies with the waiting rule are called 117 to 185 times per day against 31 for the baseline, and most calls (76 to 84%) return `[]`. The complexity per call is unchanged, but the number of calls rises, as section 5 predicts.
-- **The location buckets pay off.** C (heap, urgency first) costs about twice as much per call as B (2.21 ms against 1.12 ms), although its heap selection looks cheaper on paper. C prices every popped candidate with an O(s + k) timing pass, so its selection is O(n(s + k)) over n parcels, while B's buckets price each of at most L ≤ 36 locations once per position. With hundreds of waiting parcels and only 36 locations, n ≫ L, so B's bucketed cheapest insertion is the cheaper one in practice.
-- **Exact routing costs about 2.4× B per day** (0.486 s against 0.206 s), for no meaningful on-time gain (section 6.4). Its slowest call (324 ms) is the factorial search on an 8-stop trip.
-- **A** is cheap per call (0.59 ms) despite its n k² worst case, because its trips are built from a sorted list with few accepted parcels.
+- **B and C cost about the same per call; C costs less per day.** Per call the two are within about 10% of each other. C is called about 37% less often because it waits less, so it uses about 0.6× B's policy time per day. (An earlier single run suggested C cost twice as much per call; repeated runs do not confirm it, and that claim has been withdrawn.)
+- **Exact routing costs about 2× B per day** (1.9 to 2.5× across runs), for no meaningful on-time gain (section 6.4).
+- **A** is cheap per call (0.40 ms) despite its n k² worst case, because its trips are built from a sorted list with few accepted parcels.
 
 ## 6. Experimental results
 
@@ -273,7 +275,27 @@ Fleet usage (means of daily values; capacity utilisation = size delivered / (tri
 - **C (least slack first):** 0.8956, below B on 16 of 20 days (−0.045 on average, significant). Picking the most urgent parcel first pulls parcels from across town, so C drives 22% more km per day (4046 against 3325) and delivers 35 fewer parcels on time per day. But C **beats B on day_002, day_004, day_016 and day_019**, and day_004 and day_019 are B's two weakest days (late-morning surge days, section 8). On those days urgency-first protects parcels that B's distance-first growth strands.
 - **D (exact routing):** equal to B on 18 days, higher on day_010 (+0.0037) and day_015 (+0.0188), never lower. Exact search runs on every candidate trip with 2 to 8 stops (71% of 2,101 calls over 20 days) and finds a strictly shorter order in only 8.2% of them; km per day is essentially unchanged (3325 → 3324). The two better days come from knock-on effects (a vehicle returning a few minutes earlier is free for the next round), not from the routes themselves. The 20-day gain (+0.0011) is not significant (sign test p = 0.50, t = 1.19).
 
-### 6.5 Policy B threshold tuning (`results/tuning_grow_2opt_wait_fill.csv`)
+### 6.5 Sensitivity: what if early deliveries counted?
+
+The metric counts an early delivery as a failure, and refusing early deliveries is the largest single gain in the design history (+0.22, section 7). `delivered_by_deadline_rate` = (on time + early) / all parcels re-scores every policy as if early deliveries counted (`results/analysis.json`, section `sensitivity`):
+
+| Policy | On-time rate | Delivered-by-deadline rate |
+| --- | --- | --- |
+| D `ucs_routing` | 0.9419 | 0.9419 |
+| B `grow_2opt_wait_fill` | 0.9408 | 0.9408 |
+| C `least_slack` | 0.8956 | 0.8956 |
+| A `edf_nn_wait` | 0.7591 | 0.7591 |
+| explored step 6 `grow_2opt_wait` | 0.9408 | 0.9408 |
+| explored step 4 `grow_2opt` | 0.6117 | **0.8653** |
+| explored step 2 `edf_nn_skip_overdue` | 0.5587 | 0.6004 |
+| explored step 1 `edf_nn` | 0.4141 | 0.4327 |
+| baseline | 0.2741 | 0.2741 |
+
+- **The ranking of the four submitted policies does not change** (D, B, C, A), because none of them delivers early.
+- What changes is the value of the "no early delivery" idea. With early deliveries counted, step 4 (which delivers about 201 parcels per day early) scores 0.8653 instead of 0.6117 and overtakes A. Waiting would then add +0.0755 (0.8653 → 0.9408) instead of the +0.11 attributed to it when combined with refusing early deliveries.
+- So B remains the best policy under either metric; the size of the gain credited to refusing early deliveries depends on the business rule that early deliveries are failures. State this in the report's metric section.
+
+### 6.6 Policy B threshold tuning (`results/tuning_grow_2opt_wait_fill.csv`)
 
 Mean on-time rate of B for each setting, on the tuning days (day_001 to day_010) and the test days (day_011 to day_020). The setting was chosen by the tuning column only.
 
@@ -290,28 +312,31 @@ Mean on-time rate of B for each setting, on the tuning days (day_001 to day_010)
 | 0.9 | 10 | 0.9387 | 0.9537 |
 | 0.9 | 20 | 0.9368 | 0.9517 |
 | 0.9 | 40 | 0.9337 | 0.9438 |
+| 1.0 (wait until full) | 10 | 0.8613 | 0.8450 |
+| 1.0 | 20 | 0.8959 | 0.8923 |
+| 1.0 | 40 | 0.9056 | 0.8914 |
 
 Reading it:
 
-- Waiting for fuller trips helps steadily up to about 0.5 and flattens after: 0.82 → 0.89 → 0.94 on the test days. Anything from 0.5 to 0.9 gives 0.93 to 0.95, so the policy does not depend on a finely tuned number.
+- Waiting for fuller trips helps steadily from 0 to 0.75: 0.82 → 0.89 → 0.94 on the test days. On the test days it keeps rising to 0.9537 at 0.9, then **falls sharply at 1.0** (0.85 to 0.89), because insisting on full trips holds parcels back too long. So the curve peaks between 0.75 and 0.9 on both halves; the grid covers the whole range up to 1.0. Anything from 0.5 to 0.9 gives 0.93 to 0.95, so the policy does not depend on a finely tuned number.
 - A longer `WAIT_SLACK` is slightly worse at every fill level, because holding parcels back longer leaves less margin later. With waiting off, `WAIT_SLACK` has no effect (identical rows), as expected.
 - The chosen setting scores **higher** on the test days (0.9424) than on the tuning days (0.9392): no sign of overfitting. 0.9 scores higher on the test days (0.9537), but choosing it would mean choosing on the test data; the honest choice is 0.75.
-- The `MIN_FILL = 0.0` rows are B without its waiting rule: 20-day mean 0.8318 (section 7).
+- The `MIN_FILL = 0.0` rows are B without its waiting rule: 20-day mean 0.8318 (section 7). Because the 1.0 rows were added on 13 Nov, the grid now has 18 settings; 0.75 / 10 is still chosen.
 - These are the same choices and nearly the same scores as before overdue filling was added to B; filling does not change the best thresholds.
 
 ## 7. Design history: how each idea earned its gain
 
-The four policies are the end of a sequence in which each step added one idea. The intermediate versions are not in the submission as separate files, but the steps make the strongest "which idea earned which gain" argument for the report. Numbers are 20-day mean on-time rates from the same simulator and data.
+The four policies are the end of a sequence in which each step added one idea. The intermediate versions are in the submission as explored policies, and the steps make the strongest "which idea earned which gain" argument for the report. Paired tests for each step are in `results/analysis.json`. Numbers are 20-day mean on-time rates from the same simulator and data.
 
 | Step | Version | On-time rate | Delivery rate | What changed | Reproduce |
 | --- | --- | --- | --- | --- | --- |
 | 0 | baseline | 0.2741 | 0.4045 | Supplied | `baseline.py` |
-| 1 | A without timing rules (`edf_nn`) | 0.4141 | 0.7885 | Earliest Deadline First + nearest neighbor | commit `92948fd` |
-| 2 | + overdue parcels last (`edf_nn_skip_overdue`) | 0.5587 | 0.7835 | Do not spend trips on lost causes | commit `92948fd` |
+| 1 | A without timing rules (`edf_nn`) | 0.4141 | 0.7885 | Earliest Deadline First + nearest neighbor | explored policy, `run_experiments.py` |
+| 2 | + overdue parcels last (`edf_nn_skip_overdue`) | 0.5587 | 0.7835 | Do not spend trips on lost causes | explored policy, `run_experiments.py` |
 | 3 | **Policy A** (+ on-time-only trips and waiting) | **0.7591** | 0.7591 | Never early or late; wait for fuller trips | `edf_nn_wait.py` |
-| 4 | B without timing rules (`grow_2opt`) | 0.6117 | 0.8653 | Cheapest insertion by location, 2-opt; early arrival allowed | commit `92948fd` |
+| 4 | B without timing rules (`grow_2opt`) | 0.6117 | 0.8653 | Cheapest insertion by location, 2-opt; early arrival allowed | explored policy, `run_experiments.py` |
 | 5 | + no early deliveries | 0.8318 | not measured | Only add parcels that arrive inside their window (measured with filling on, which does not change the on-time rate) | tuning script, `MIN_FILL = 0.0` rows |
-| 6 | + waiting for fuller trips (`grow_2opt_wait`) | 0.9408 | 0.9408 | Wait one round when nearly empty and free | commit `92948fd` |
+| 6 | + waiting for fuller trips (`grow_2opt_wait`) | 0.9408 | 0.9408 | Wait one round when nearly empty and free | explored policy, `run_experiments.py` |
 | 7 | **Policy B** (+ overdue filling) | **0.9408** | **0.9546** | Late parcels ride along where they delay no one | `grow_2opt_wait_fill.py` |
 
 What it shows:
@@ -354,8 +379,8 @@ Trade-offs:
 
 ## 9. Recommendation and conclusion points
 
-- **Recommended policy: B `grow_2opt_wait_fill`.** On-time rate 0.9408, best delivery rate (0.9546), lowest km per delivered parcel (4.39, tied with D), about 0.2 s of policy time per day.
-- **Why not D**, although its mean is 0.0011 higher: the difference is on 2 days only, not significant, comes from knock-on timing rather than better routes, costs about 2.4× B's policy time per day (still under half a second) and needs an exponential search with a cap. If the team prefers D, the report must say all of this.
+- **Recommended policy: B `grow_2opt_wait_fill`.** On-time rate 0.9408, best delivery rate (0.9546), lowest km per delivered parcel (4.39, tied with D), about 0.15 s of policy time per day.
+- **Why not D**, although its mean is 0.0011 higher: the difference is on 2 days only, not significant, comes from knock-on timing rather than better routes, costs about 2× B's policy time per day (1.9 to 2.5× across runs; still under 0.4 s) and needs an exponential search with a cap. If the team prefers D, the report must say all of this.
 - C and A are valuable as comparisons: C shows distance-first selection matters except on surge days; A shows timing rules alone are worth a lot but not enough.
 - Conclusion themes: choose parcels that are close together; never spend capacity on lost causes; never deliver early when the metric does not reward it; do not send nearly empty trips when waiting is free; let late parcels ride along only when it costs nothing; routing quality matters far less than selection and timing.
 
@@ -381,16 +406,16 @@ python3 tune_grow_2opt_wait_fill.py                               # Policy B thr
 
 Outputs: `results/<policy>/day_XXX/log.txt`, `metrics.json` and `timing.json`, `results/summary.csv`, `results/summary_per_day.csv`, `results/summary.json`, `results/tuning_grow_2opt_wait_fill.csv`. Runs are deterministic: repeating a command gives byte-for-byte identical logs and metrics; only the timings change. Use `--workers 1` for the timings. After the merge into four files, Policies A and B produce byte-for-byte the same logs as before.
 
-To reproduce the design-history steps 1, 2, 4 and 6 (section 7): `git checkout 92948fd`, then `python3 run_experiments.py --policies edf_nn edf_nn_skip_overdue grow_2opt grow_2opt_wait`.
+The design-history steps 1, 2, 4 and 6 are explored policies in `solution/policies/`, so `run_experiments.py` reproduces them with the rest. Their logs are byte-for-byte identical to the original runs at commit `92948fd`.
 
-Not reproducible from the repository: the paired tests, the 0.9646 ceiling, the day_019 breakdown and D's search counts were computed with a scratch analysis script. Add it to the repository if the report uses these numbers.
+`python3 analyse_results.py` reproduces the dataset facts, the 0.9646 ceiling, every paired test (current policies and design steps), the sensitivity table, the day_019 and day_004 breakdowns, the stops per trip and D's search counts, and writes them to `results/analysis.json`.
 
 ## 12. Open items before submission
 
-- `results/` is listed in `.gitignore`, but the brief requires it in the ZIP. Add it by hand, together with `run_experiments.py` and `tune_grow_2opt_wait_fill.py` (they are at the project root, outside `solution/`).
-- Decide whether to add the analysis script (paired tests, ceiling, per-day tables) to the repository.
+- Include `results/` (no longer git-ignored), `run_experiments.py`, `tune_grow_2opt_wait_fill.py` and `analyse_results.py` in the ZIP; the three scripts are at the project root, outside `solution/`.
+- Fill in the team members' names in the README.
 - Confirm against the syllabus which "algorithm and data structure taught in class" the report will name (section 4.6 lists the candidates).
-- Remove the team-status section from the README before submission.
+- Report document: fix the page-1 header ("> 0.5 s" → "< 0.4 s"), move the "Course topics used" paragraph before the references, keep Tables 1 and 2 on one page each, and keep the Section 5 and 7 headings with their text.
 - Push `marcus` and merge into `main`; tell Varshni that her `grow_2opt.py` and `grow_2opt_wait.py` were merged into `grow_2opt_wait_fill.py` and her tuning script was renamed.
 - Add references (candidates below).
 
